@@ -1,5 +1,5 @@
-# This is a group project for Secure Programming.
-- Collaborators:
+## This is a group project for Secure Programming.
+# Collaborators:
 - Samira Hazara
 - Demi Papazoglou
 - Caitlyn Joyce Martyr
