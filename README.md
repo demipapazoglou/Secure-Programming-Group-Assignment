@@ -1,7 +1,7 @@
 # This is a group project for Secure Programming.
-- Collaborators:
+## Collaborators:
 - Samira Hazara
 - Demi Papazoglou
-- Caitlyn Joyce Martyr
+- Caitlin Joyce Martyr
 - Amber Yaa Wen Chew
 - Grace Baek 
