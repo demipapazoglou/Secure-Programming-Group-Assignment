@@ -2,6 +2,6 @@
 ## Collaborators:
 - Samira Hazara
 - Demi Papazoglou
-- Caitlyn Joyce Martyr
+- Caitlin Joyce Martyr
 - Amber Yaa Wen Chew
 - Grace Baek 
