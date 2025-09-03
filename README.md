@@ -1,7 +1,5 @@
 # This is a group project for Secure Programming.
-## Collaborators:
-- Samira Hazara
-- Demi Papazoglou
-- Caitlyn Joyce Martyr
-- Amber Yaa Wen Chew
-- Grace Baek 
+
+## Files Included
+- `crypto/CryptoManager.js` – Handles encryption, decryption, and key management (WIP)
+- `crypto/MessageSigner.js` – Signs and verifies message envelopes (WIP)
