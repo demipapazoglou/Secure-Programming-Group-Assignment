@@ -5,134 +5,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat System</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="stylesheets/style.css">
 </head>
 
-<body>
-    <!-- default mode set to light -->
-    <data-theme="light">
-        <div class="chat-container">
-            <div class="navbar">
-                <div class="nav-header">
-                    <div class="logo">ChatSystem</div>
-                    <button class="mode-toggle" onclick="toggleMode()">Mode</button>
+<body data-theme="light">
+    <!-- Top bar -->
+    <div class="navbar-top">
+        <div class="page-title">ChatSystem</div>
+        <button class="mode-toggle" onclick="toggleMode()">Mode</button>
+    </div>
+
+    <!-- Layout container -->
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <div class="navbar">
+            <div class="logo">ChatSystem</div>
+
+            <div class="chat-tabs">
+                <button class="tab-button active" onclick="switchTab('chats')">Chats</button>
+                <button class="tab-button" onclick="switchTab('users')">Users</button>
+            </div>
+
+            <div id="chats" class="tab-content">
+                <div class="chat-option">
+                    <div class="chat-info">
+                        <div class="chat-name">Some user1</div>
+                        <div class="chat-preview">Sample chat</div>
+                    </div>
                 </div>
-                <!-- Chat/User tabs-->
+                <div class="chat-option">
+                    <div class="chat-info">
+                        <div class="chat-name">Some group</div>
+                        <div class="chat-preview">Sample group chat</div>
+                    </div>
+                </div>
+            </div>
 
-                <div class="chat-tabs">
-                    <button class="tab-button active" onclick="switchTab('chats')">Chats</button>
-                    <button class="tab-button" onclick="switchTab('users')">Users</button>
+            <div id="users" class="tab-content" style="display:none;">
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Some user</div>
+                        <div class="user-status">Online</div>
+                    </div>
+                </div>
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Some group</div>
+                        <div class="user-status">Group</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main chat area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <div class="chat-title">Some user1</div>
+                <div class="chat-subtitle">Last message preview...</div>
+            </div>
+
+            <div class="message-container">
+                <div class="message">
+                    <div class="message-content">
+                        <div class="text">Sample text</div>
+                    </div>
                 </div>
 
-                <div class="tabs">
-                    <button class="tab-content" id="tabs">
-                        <div class="chat-option">
-                            <div class="chat-info">
-                                <div class="chat-name">Some user1</div>
-                                <div class="chat-preview">Sample chat</div>
-                            </div>
-                        </div>
+                <div class="my message">
+                    <div class="message-content">
+                        <div class="text">Sample reply</div>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="chat-option">
-                            <div class="chat-info">
-                                <div class="chat-name">Some group</div>
-                                <div class="chat-preview">Sample group chat</div>
-                            </div>
-                        </div>
+            <div class="message-input-container">
+                <div class="input-wrapper">
+                    <textarea class="message-input" placeholder="//"></textarea>
+                    <div class="input-actions">
+                        <button class="input-btn"></button>
+                        <button class="input-btn"></button>
+                        <button class="input-btn send-btn"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                        <!-- User tab for one-on-one chats -->
-                        <div class="tab-content" id="Users">
-                            <div class="User-item">
-                                <div class="user-info">
-                                    <div class="user-name">Some user</div>
-                                    <div class="user-status">Online</div>
-                                </div>
-                            </div>
+    <script>
+        // Toggle light/dark mode
+        function toggleMode() {
+            const body = document.body;
+            const modeBtn = document.querySelector('.mode-toggle');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                modeBtn.textContent = 'Dark';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                modeBtn.textContent = 'Light';
+            }
+        }
 
-                            <!-- User tab for group chats-->
-                            <div class="user-item">
-                                <div class="user-info">
-                                    <div class="user-name">Some group</div>
-                                    <div class="user-status">group</div>
-                                </div>
-                            </div>
+        // Switch between Chats and Users tabs
+        function switchTab(tab, btn) {
+            // Remove active from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            // Add active to clicked button
+            btn.classList.add('active');
 
-                            <!-- chat content-->
-                            <div class="main-chat">
-                                <div class="chat-header">
-                                    <div class="chat-title">
-                                        <div>
-                                            <div class="chat-title">some user1</div>
-                                            <div class="chat-subtitle">Last message preview...</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- incoming message -->
-                                <div class="message-container">
-                                    <div class="message">
-                                        <div class="message-content">
-                                            <div class="text">Sample text</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- outgoing message -->
-                                    <div class="my message">
-                                        <div class="message-content">
-                                            <div class="text">Sample reply</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- incoming file message -->
-                                    <div class="my message">
-                                        <div class="message-content">
-                                            <div class="file">
-                                                <div class="file-icon">!!</div>
-
-                                                <div>
-                                                    <div class="file-name">file.pdf</div>
-                                                    <div class="file-size">? MB</div>
-                                                </div>
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="message-input-container">
-                                    <div class="input-wrapper">
-                                        <textarea class="message-input" placeholder="//"></textarea>
-                                        <div class="input-actions">
-                                            <button class="input-btn"></button>
-                                            <button class="input-btn"></button>
-                                            <button class="input-btn send-btn"></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <script>
-                            /* for toggle mode */
-                            function toggleMode() {
-                                const body = document.body;
-                                const themeToggle = document.querySelector('.mode-toggle');
-                                if (body.getAttribute('data-theme') === 'light') {
-                                    body.setAttribute('data-theme', 'dark');
-                                    themeToggle.textContent = '??';
-                                } else {
-                                    body.setAttribute('data-theme', 'light');
-                                    themeToggle.textContent = '??';
-                                }
-                            }
-                            /* for tab switching */
-                            function switchTab(tab) {
-                                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                                event.target.classList.add('active');
-                                document.getElementById('tabs').style.display = tab === 'chats' ? 'block' : 'none';
-                                document.getElementById('users').style.display = tab === 'users' ? 'block' : 'none';
-                            }
-                        </script>
+            // Show/hide corresponding content
+            document.getElementById('tabs').style.display = tab === 'chats' ? 'block' : 'none';
+            document.getElementById('Users').style.display = tab === 'users' ? 'block' : 'none';
+        }
+    </script>
 </body>
 
 </html>
