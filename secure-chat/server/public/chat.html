@@ -1,14 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+<<<<<<< HEAD
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat28</title>
     <link rel="stylesheet" href="stylesheets/chat-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+=======
+  <meta charset="UTF-8">
+  <title>ChatNow - Login</title>
+  <link rel="stylesheet" href="stylesheets/login.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="login.js" defer></script>
+>>>>>>> main
 </head>
+<body>
+  <div id="login-app">
+    <!-- LOGIN -->
+    <div class="login-box" v-if="!sign_up">
+      <div class="login-title">Log In to Chat28</div>
+      <form @submit.prevent="handleLogin">
+        <div class="login-inner">
+          <div class="login-text">Username / Email</div>
+          <div class="input-box">
+            <input type="text" v-model="loginData.email" placeholder="Enter your username or email" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Password</div>
+          <div class="input-box">
+            <input type="password" v-model="loginData.password" placeholder="Enter your password" required>
+          </div>
+        </div>
+        <button type="submit" class="login-button">Login</button>
+      </form>
 
+<<<<<<< HEAD
 <body data-theme="light">
     <div class="drop-zone" id="dropZone">
         <i class="fa-solid fa-folder-open"></i>Drop files here to upload
@@ -19,8 +48,59 @@
         <div class="top-controls">
             <button class="profile-btn" onclick="showProfile()"><i class="fa-solid fa-user"></i> Profile</button>
             <button class="mode-toggle" onclick="toggleMode()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
-        </div>
+=======
+      <a href="#" class="forgot-password">Forgot Password?</a>
+
+      <div class="flex-row">
+        <div class="divider"></div>
+        <div class="or-text">OR</div>
+        <div class="divider"></div>
+      </div>
+
+      <div class="not-member">
+        <div>Don’t have an account?</div>
+        <div @click="toggleSignUp" class="sign-up-today">Create an account</div>
+      </div>
     </div>
+
+    <!-- SIGN UP -->
+    <div class="login-box" v-else>
+      <div class="login-title">Sign Up for Chat28</div>
+      <form @submit.prevent="handleSignup">
+        <div class="login-inner">
+          <div class="login-text">Username</div>
+          <div class="input-box">
+            <input type="text" v-model="signupData.username" placeholder="Choose a username" required>
+          </div>
+>>>>>>> main
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Email</div>
+          <div class="input-box">
+            <input type="email" v-model="signupData.email" placeholder="Enter your email" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Password</div>
+          <div class="input-box">
+            <input type="password" v-model="signupData.password" placeholder="Create a password" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Confirm Password</div>
+          <div class="input-box">
+            <input type="password" v-model="signupData.confirmPassword" placeholder="Confirm password" required>
+          </div>
+        </div>
+        <button type="submit" class="login-button">Sign Up</button>
+      </form>
+
+      <div class="not-member">
+        <div>Already have an account?</div>
+        <div @click="toggleSignUp" class="sign-up-today">Log in</div>
+      </div>
+    </div>
+<<<<<<< HEAD
 
     <div class="chat-container">
         <div class="navbar">
@@ -222,6 +302,8 @@
         function adjustHeight(element) { element.style.height = 'auto'; element.style.height = element.scrollHeight + 'px'; }
         function addEmoji() { const messageInput = document.getElementById('messageInput'); const emojis = ['😊', '😄', '😍', '🤔', '👍', '👎', '❤️', '🔥', '💯', '🎉']; messageInput.value += emojis[Math.floor(Math.random() * emojis.length)]; messageInput.focus(); adjustHeight(messageInput); }
     </script>
+=======
+  </div>
+>>>>>>> main
 </body>
-
 </html>
