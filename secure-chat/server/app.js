@@ -6,8 +6,20 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+// var chatRouter = require('./routes/chat');
 
 var app = express();
+
+//initialise crypto utilities
+var CryptoManager = require('../crypto/CryptoManager');
+var MessageSigner = require('../crypto/MessageSigner');
+
+const cryptoManager = new CryptoManager();
+const messageSigner = new MessageSigner(cryptoManager);
+
+//make them available to routes
+app.locals.cryptoManager = cryptoManager;
+app.locals.messageSigner = messageSigner;
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -21,6 +33,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
+//added char routes
+// app.use('/chat', chatRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
