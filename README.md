@@ -6,4 +6,4 @@
 - `test-crypto.js` -  Test file for verifying the functionality of `CryptoManager.js` and `MessageSigner.js`.
 
 ## How to Test
-To run the tests, execute: node test-crypto.js
+To run the tests, execute: `node test-crypto.js`
