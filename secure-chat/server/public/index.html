@@ -11,176 +11,236 @@
 </head>
 
 <body data-theme="light">
-    <!-- Drop zone for file uploads -->
     <div class="drop-zone" id="dropZone">
         <i class="fa-solid fa-folder-open"></i>Drop files here to upload
     </div>
 
-    <!-- Top bar -->
     <div class="navbar-top">
         <div class="page-title">Chat28</div>
         <div class="top-controls">
-            <button class="profile-btn" onclick="goToProfile()"><i class="fa-solid fa-user"></i> Profile</button>
+            <button class="profile-btn" onclick="showProfile()"><i class="fa-solid fa-user"></i> Profile</button>
             <button class="mode-toggle" onclick="toggleMode()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
         </div>
     </div>
-
-    <!-- Layout container -->
+    <!-- left nav bar container -->
     <div class="chat-container">
-        <!-- Sidebar -->
         <div class="navbar">
             <div class="logo"><i class="fa-solid fa-comment"></i> Chat28</div>
 
-            <div class="chat-tabs">
-                <button class="tab-button active" onclick="switchTab('chats', this)"><i class="fa-solid fa-comments"></i> Chats</button>
-                <button class="tab-button" onclick="switchTab('users', this)"><i class="fa-solid fa-users"></i> Users</button>
+            <div class="user-count">
+                <i class="fa-solid fa-users"></i> 5 Members Online
             </div>
 
-            <div id="chats" class="tab-content">
-                <div class="chat-option active" onclick="selectChat(this, 'John Doe', 'Last seen 2 minutes ago')">
-                    <div class="chat-info">
-                        <div class="chat-name">John Doe</div>
-                        <div class="chat-preview">Hey, how's the project going?</div>
+            <div class="section-title">Online Members</div>
+            <div class="tab-content">
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Alice Johnson</div>
+                        <div class="user-status online">
+                            <span class="status-indicator"></span>
+                            Online
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Alice Johnson')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
-                <div class="chat-option" onclick="selectChat(this, 'Design Team', '5 members • 3 online')">
-                    <div class="chat-info">
-                        <div class="chat-name"><i class="fa-solid fa-paintbrush"></i> Design Team</div>
-                        <div class="chat-preview">Sarah: The mockups look great!</div>
+                <!-- User info in nav bar-->
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Bob Smith</div>
+                        <div class="user-status online">
+                            <span class="status-indicator"></span>
+                            Online
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Bob Smith')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
-                <div class="chat-option" onclick="selectChat(this, 'Project Alpha', '8 members • 2 online')">
-                    <div class="chat-info">
-                        <div class="chat-name"><i class="fa-solid fa-rocket"></i> Project Alpha</div>
-                        <div class="chat-preview">Meeting at 3 PM today</div>
+
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Charlie Brown</div>
+                        <div class="user-status away">
+                            <span class="status-indicator"></span>
+                            Away
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Charlie Brown')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
-                <div class="chat-option" onclick="selectChat(this, 'Jane Smith', 'Online')">
-                    <div class="chat-info">
-                        <div class="chat-name">Jane Smith</div>
-                        <div class="chat-preview">Thanks for the files!</div>
+
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Diana Prince</div>
+                        <div class="user-status online">
+                            <span class="status-indicator"></span>
+                            Online
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Diana Prince')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
-                <div class="chat-option" onclick="selectChat(this, 'Development Team', '12 members • 7 online')">
-                    <div class="chat-info">
-                        <div class="chat-name"><i class="fa-solid fa-laptop-code"></i> Development Team</div>
-                        <div class="chat-preview">Alex: Code review ready</div>
+
+                <div class="user-item">
+                    <div class="user-info">
+                        <div class="user-name">Eve Wilson</div>
+                        <div class="user-status online">
+                            <span class="status-indicator"></span>
+                            Online
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Eve Wilson')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
             </div>
 
-            <div id="users" class="tab-content" style="display:none;">
-                <div class="user-item" onclick="startChat(this, 'John Doe')">
+            <div class="section-title" style="margin-top: 20px;">Offline Members</div>
+            <div class="tab-content">
+                <div class="user-item">
                     <div class="user-info">
-                        <div class="user-name">John Doe</div>
-                        <div class="user-status online">Online</div>
+                        <div class="user-name">Frank Miller</div>
+                        <div class="user-status offline">
+                            <span class="status-indicator"></span>
+                            Last seen 2h ago
+                        </div>
                     </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Frank Miller')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
-                <div class="user-item" onclick="startChat(this, 'Jane Smith')">
+
+                <div class="user-item">
                     <div class="user-info">
-                        <div class="user-name">Jane Smith</div>
-                        <div class="user-status online">Online</div>
+                        <div class="user-name">Grace Lee</div>
+                        <div class="user-status offline">
+                            <span class="status-indicator"></span>
+                            Last seen 1d ago
+                        </div>
                     </div>
-                </div>
-                <div class="user-item" onclick="startChat(this, 'Mike Johnson')">
-                    <div class="user-info">
-                        <div class="user-name">Mike Johnson</div>
-                        <div class="user-status away">Away</div>
-                    </div>
-                </div>
-                <div class="user-item" onclick="startChat(this, 'Sarah Wilson')">
-                    <div class="user-info">
-                        <div class="user-name">Sarah Wilson</div>
-                        <div class="user-status online">Online</div>
-                    </div>
-                </div>
-                <div class="user-item" onclick="startChat(this, 'Alex Chen')">
-                    <div class="user-info">
-                        <div class="user-name">Alex Chen</div>
-                        <div class="user-status offline">Offline</div>
-                    </div>
-                </div>
-                <div class="user-item" onclick="startGroupChat('Design Team')">
-                    <div class="user-info">
-                        <div class="user-name"><i class="fa-solid fa-paintbrush"></i> Design Team</div>
-                        <div class="user-status">Group • 5 members</div>
-                    </div>
-                </div>
-                <div class="user-item" onclick="startGroupChat('Project Alpha')">
-                    <div class="user-info">
-                        <div class="user-name"><i class="fa-solid fa-rocket"></i> Project Alpha</div>
-                        <div class="user-status">Group • 8 members</div>
-                    </div>
-                </div>
-                <div class="user-item" onclick="startGroupChat('Development Team')">
-                    <div class="user-info">
-                        <div class="user-name"><i class="fa-solid fa-laptop-code"></i> Development Team</div>
-                        <div class="user-status">Group • 12 members</div>
-                    </div>
+                    <button class="private-msg-btn" onclick="startPrivateChat('Grace Lee')">
+                        <i class="fa-solid fa-envelope"></i>
+                        PM
+                    </button>
                 </div>
             </div>
         </div>
-
-        <!-- Main chat area -->
+        <!-- main chat layout -->
         <div class="main-chat">
             <div class="chat-header">
                 <div>
-                    <div class="chat-title">John Doe</div>
-                    <div class="chat-subtitle">Last seen 2 minutes ago</div>
+                    <div class="chat-title">Public Channel</div>
+                    <div class="chat-subtitle">7 total members • 5 online</div>
                 </div>
                 <div class="chat-actions">
-                    <button class="action-btn" onclick="toggleChatInfo()"><i class="fa-solid fa-circle-info"></i> Info</button>
+                    <button class="action-btn" onclick="showChannelInfo()"><i class="fa-solid fa-circle-info"></i>
+                        Info</button>
                 </div>
             </div>
-
+            <!-- Message container -->
             <div class="message-container" id="messageContainer">
                 <div class="message">
-                    <div class="message-content">
-                        <div class="text">Hey! How's the project going? I wanted to check in and see if you need any
-                            help.</div>
-                        <div class="message-time">10:30 AM</div>
+                    <div class="message-header">
+                        <span class="message-sender">Alice Johnson</span>
+                        <span>Public</span>
                     </div>
+                    <div class="text">Welcome everyone to our public channel!</div>
+                    <div class="message-time">10:30 AM</div>
                 </div>
 
                 <div class="my message">
-                    <div class="message-content">
-                        <div class="text">Hi John! Things are going well. Just working on the frontend right now.</div>
-                        <div class="message-time">10:32 AM</div>
+                    <div class="message-header">
+                        <span class="message-sender">You</span>
+                        <span>Public</span>
                     </div>
+                    <div class="text">Hello everyone! Happy to be here.</div>
+                    <div class="message-time">10:32 AM</div>
+                </div>
+
+                <div class="message private-message">
+                    <div class="message-header">
+                        <span class="message-sender">Bob Smith</span>
+                        <span>Private to you</span>
+                    </div>
+                    <div class="text">Hey, can we discuss the project privately?</div>
+                    <div class="message-time">10:35 AM</div>
                 </div>
 
                 <div class="message">
-                    <div class="message-content">
-                        <div class="text">That's great! Let me send you the latest requirements.</div>
-                        <div class="file" onclick="downloadFile('File.pdf')">
-                            <div class="file-icon"><i class="fa-solid fa-file-pdf"></i></div>
-                            <div class="file-details">
-                                <div class="file-name">File.pdf</div>
-                                <div class="file-size">2.3 MB</div>
-                            </div>
-                        </div>
-                        <div class="message-time">10:35 AM</div>
+                    <div class="message-header">
+                        <span class="message-sender">Diana Prince</span>
+                        <span>Public</span>
                     </div>
+                    <div class="text">Here's the document we discussed earlier.</div>
+                    <div class="file" onclick="downloadFile('Requirements.pdf')">
+                        <div class="file-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                        <div class="file-details">
+                            <div class="file-name">Requirements.pdf</div>
+                            <div class="file-size">1.2 MB</div>
+                        </div>
+                    </div>
+                    <div class="message-time">10:37 AM</div>
                 </div>
 
                 <div class="my message">
-                    <div class="message-content">
-                        <div class="text">Perfect timing! I was just about to ask for those. Thanks!</div>
-                        <div class="message-time">10:37 AM</div>
+                    <div class="message-header">
+                        <span class="message-sender">You</span>
+                        <span>Public</span>
                     </div>
+                    <div class="text">Thanks Diana! That's exactly what we needed.</div>
+                    <div class="message-time">10:38 AM</div>
                 </div>
             </div>
 
             <div class="message-input-container">
+                <div class="message-type-selector">
+                    <button class="type-btn active" onclick="setMessageType('public', this)">
+                        <i class="fa-solid fa-globe"></i> Public
+                    </button>
+                    <button class="type-btn" onclick="setMessageType('private', this)">
+                        <i class="fa-solid fa-lock"></i> Private
+                    </button>
+                </div>
+                <!-- Private message recipient selector -->
+                <div class="private-recipient-selector" id="recipientSelector">
+                    <div class="recipient-label">Send private message to:</div>
+                    <select class="recipient-select" id="recipientSelect">
+                        <option value="">Select recipient...</option>
+                        <option value="Alice Johnson">Alice Johnson</option>
+                        <option value="Bob Smith">Bob Smith</option>
+                        <option value="Charlie Brown">Charlie Brown</option>
+                        <option value="Diana Prince">Diana Prince</option>
+                        <option value="Eve Wilson">Eve Wilson</option>
+                        <option value="Frank Miller">Frank Miller</option>
+                        <option value="Grace Lee">Grace Lee</option>
+                    </select>
+                </div>
+                <!-- Message input area -->
                 <div class="input-wrapper">
                     <textarea class="message-input" id="messageInput" placeholder="Type your message..." rows="1"
                         onkeydown="handleKeyPress(event)" oninput="adjustHeight(this)"></textarea>
                     <div class="input-actions">
                         <input type="file" class="file-input" id="fileInput" multiple
                             onchange="handleFileSelect(event)">
-                        <button class="input-btn" onclick="triggerFileInput()" title="Attach file"><i class="fa-solid fa-paperclip"></i></button>
-                        <button class="input-btn" onclick="addEmoji()" title="Add emoji"><i class="fa-solid fa-smile"></i></button>
-                        <button class="input-btn send-btn" onclick="sendMessage()" title="Send message"><i class="fa-solid fa-paper-plane"></i></button>
+                        <button class="input-btn" onclick="triggerFileInput()" title="Attach file">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                        <button class="input-btn" onclick="addEmoji()" title="Add emoji">
+                            <i class="fa-solid fa-smile"></i>
+                        </button>
+                        <button class="input-btn send-btn" onclick="sendMessage()" title="Send message">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -188,7 +248,7 @@
     </div>
 
     <script>
-        // File upload functionality
+        let currentMessageType = 'public';
         let dragCounter = 0;
 
         // Initialize drag and drop
@@ -196,13 +256,75 @@
             const dropZone = document.getElementById('dropZone');
             const chatContainer = document.querySelector('.chat-container');
 
-            // Drag events
             chatContainer.addEventListener('dragenter', handleDragEnter);
             chatContainer.addEventListener('dragleave', handleDragLeave);
             chatContainer.addEventListener('dragover', handleDragOver);
             chatContainer.addEventListener('drop', handleDrop);
+
+            // Focus on message input
+            document.getElementById('messageInput').focus();
+
+            // Set initial scroll position
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.scrollTop = messageContainer.scrollHeight;
         });
 
+        // Dark mode toggle function
+        function toggleMode() {
+            const body = document.body;
+            const modeBtn = document.querySelector('.mode-toggle');
+
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                modeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                modeBtn.innerHTML = '<i class="fa-solid fa-moon"></i> Dark Mode';
+            }
+        }
+
+        // Profile function
+        function showProfile() {
+            alert('Profile settings would open here!');
+        }
+
+        // Channel info function
+        function showChannelInfo() {
+            alert('Channel information would display here!');
+        }
+
+        // Set message type (public or private)
+        function setMessageType(type, btn) {
+            currentMessageType = type;
+
+            // Update button states
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Show/hide recipient selector
+            const recipientSelector = document.getElementById('recipientSelector');
+            if (type === 'private') {
+                recipientSelector.classList.add('active');
+            } else {
+                recipientSelector.classList.remove('active');
+            }
+        }
+
+        // Start private chat with specific user
+        function startPrivateChat(userName) {
+            // Switch to private message mode
+            const privateBtn = document.querySelector('.type-btn:nth-child(2)');
+            setMessageType('private', privateBtn);
+
+            // Set recipient
+            const recipientSelect = document.getElementById('recipientSelect');
+            recipientSelect.value = userName;
+
+            // Focus on input
+            document.getElementById('messageInput').focus();
+        }
+
+        // File upload functions
         function handleDragEnter(e) {
             e.preventDefault();
             dragCounter++;
@@ -241,7 +363,6 @@
             if (files.length > 0) {
                 handleFiles(files);
             }
-            // Reset input
             event.target.value = '';
         }
 
@@ -258,10 +379,15 @@
 
             const fileIcon = getFileIcon(file.name);
             const fileSize = formatFileSize(file.size);
+            const messageTypeLabel = currentMessageType === 'private' ? 'Private' : 'Public';
 
             messageDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="text">Uploaded a file:</div>
+                    <div class="message-header">
+                        <span class="message-sender">You</span>
+                        <span>${messageTypeLabel}</span>
+                    </div>
+                    <div class="text">Shared a file:</div>
                     <div class="file" onclick="downloadFile('${file.name}')">
                         <div class="file-icon">${fileIcon}</div>
                         <div class="file-details">
@@ -280,26 +406,26 @@
         function getFileIcon(fileName) {
             const extension = fileName.split('.').pop().toLowerCase();
             const iconMap = {
-            'pdf': '<i class="fas fa-file-pdf"></i>',
-            'doc': '<i class="fas fa-file-word"></i>',
-            'docx': '<i class="fas fa-file-word"></i>',
-            'xls': '<i class="fas fa-file-excel"></i>',
-            'xlsx': '<i class="fas fa-file-excel"></i>',
-            'ppt': '<i class="fas fa-file-powerpoint"></i>',
-            'pptx': '<i class="fas fa-file-powerpoint"></i>',
-            'jpg': '<i class="fas fa-file-image"></i>',
-            'jpeg': '<i class="fas fa-file-image"></i>',
-            'png': '<i class="fas fa-file-image"></i>',
-            'gif': '<i class="fas fa-file-image"></i>',
-            'mp4': '<i class="fas fa-file-video"></i>',
-            'avi': '<i class="fas fa-file-video"></i>',
-            'mp3': '<i class="fas fa-file-audio"></i>',
-            'wav': '<i class="fas fa-file-audio"></i>',
-            'zip': '<i class="fas fa-file-archive"></i>',
-            'rar': '<i class="fas fa-file-archive"></i>',
-            'txt': '<i class="fas fa-file-alt"></i>'
+                'pdf': '<i class="fa-solid fa-file-pdf"></i>',
+                'doc': '<i class="fa-solid fa-file-word"></i>',
+                'docx': '<i class="fa-solid fa-file-word"></i>',
+                'xls': '<i class="fa-solid fa-file-excel"></i>',
+                'xlsx': '<i class="fa-solid fa-file-excel"></i>',
+                'ppt': '<i class="fa-solid fa-file-powerpoint"></i>',
+                'pptx': '<i class="fa-solid fa-file-powerpoint"></i>',
+                'jpg': '<i class="fa-solid fa-file-image"></i>',
+                'jpeg': '<i class="fa-solid fa-file-image"></i>',
+                'png': '<i class="fa-solid fa-file-image"></i>',
+                'gif': '<i class="fa-solid fa-file-image"></i>',
+                'mp4': '<i class="fa-solid fa-file-video"></i>',
+                'avi': '<i class="fa-solid fa-file-video"></i>',
+                'mp3': '<i class="fa-solid fa-file-audio"></i>',
+                'wav': '<i class="fa-solid fa-file-audio"></i>',
+                'zip': '<i class="fa-solid fa-file-archive"></i>',
+                'rar': '<i class="fa-solid fa-file-archive"></i>',
+                'txt': '<i class="fa-solid fa-file-alt"></i>'
             };
-            return iconMap[extension] || '<i class="fas fa-file"></i>';
+            return iconMap[extension] || '<i class="fa-solid fa-file"></i>';
         }
 
         function formatFileSize(bytes) {
@@ -311,163 +437,7 @@
         }
 
         function downloadFile(fileName) {
-            console.log('Downloading file:', fileName);
-            // In a real application, this would trigger a file download
             alert(`Downloading ${fileName}...`);
-        }
-
-        // Toggle light/dark mode
-        function toggleMode() {
-            const body = document.body;
-            const modeBtn = document.querySelector('.mode-toggle');
-            if (body.getAttribute('data-theme') === 'light') {
-                body.setAttribute('data-theme', 'dark');
-                modeBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
-            } else {
-                body.setAttribute('data-theme', 'light');
-                modeBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
-            }
-        }
-
-        // Profile function
-        function goToProfile() {
-            console.log('Navigating to profile page...');
-            // In a real application, this would navigate to the profile page
-            alert('Profile page would open here!');
-        }
-
-        // Switch between Chats and Users tabs
-        function switchTab(tab, btn) {
-            // Remove active from all tab buttons
-            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            // Add active to clicked button
-            btn.classList.add('active');
-
-            // Show/hide corresponding content
-            document.getElementById('chats').style.display = tab === 'chats' ? 'block' : 'none';
-            document.getElementById('users').style.display = tab === 'users' ? 'block' : 'none';
-        }
-
-        // Select a chat
-        function selectChat(element, chatName, subtitle) {
-            // Remove active from all chat options
-            document.querySelectorAll('.chat-option').forEach(option => {
-                option.classList.remove('active');
-            });
-            // Add active to selected chat
-            element.classList.add('active');
-
-            // Update chat header
-            document.querySelector('.chat-title').textContent = chatName;
-            document.querySelector('.chat-subtitle').textContent = subtitle;
-
-            // Load chat messages (in a real app, this would load from server)
-            loadChatMessages(chatName);
-        }
-
-        // Start a new chat from users tab
-        function startChat(element, userName) {
-            // Switch to chats tab and update header
-            document.querySelector('.chat-title').textContent = userName;
-            document.querySelector('.chat-subtitle').textContent = 'Online';
-
-            // Switch to chats tab
-            const chatsTab = document.querySelector('.tab-button');
-            switchTab('chats', chatsTab);
-
-            // Clear existing active chats and create new one if needed
-            document.querySelectorAll('.chat-option').forEach(option => {
-                option.classList.remove('active');
-            });
-
-            // Load chat messages for this user
-            loadChatMessages(userName);
-        }
-
-        // Start a group chat
-        function startGroupChat(groupName) {
-            document.querySelector('.chat-title').textContent = groupName;
-            document.querySelector('.chat-subtitle').textContent = 'Group chat';
-
-            // Switch to chats tab
-            const chatsTab = document.querySelector('.tab-button');
-            switchTab('chats', chatsTab);
-
-            // Load group chat messages
-            loadChatMessages(groupName);
-        }
-
-        // Load chat messages (placeholder function)
-        function loadChatMessages(chatName) {
-            const messageContainer = document.getElementById('messageContainer');
-
-            // Sample messages for different chats
-            const chatMessages = {
-                'John Doe': `
-                    <div class="message">
-                        <div class="message-content">
-                            <div class="text">Hey! How's the project going? I wanted to check in and see if you need any help.</div>
-                            <div class="message-time">10:30 AM</div>
-                        </div>
-                    </div>
-                    <div class="my message">
-                        <div class="message-content">
-                            <div class="text">Hi John! Things are going well. Just working on the frontend right now.</div>
-                            <div class="message-time">10:32 AM</div>
-                        </div>
-                    </div>
-                `,
-                'Design Team': `
-                    <div class="message">
-                        <div class="message-content">
-                            <div class="text">Sarah: The mockups look great! Ready for review.</div>
-                            <div class="message-time">9:15 AM</div>
-                        </div>
-                    </div>
-                    <div class="message">
-                        <div class="message-content">
-                            <div class="text">Mike: Thanks! I'll take a look and provide feedback by EOD.</div>
-                            <div class="message-time">9:20 AM</div>
-                        </div>
-                    </div>
-                    <div class="my message">
-                        <div class="message-content">
-                            <div class="text">Looks amazing! The color scheme works perfectly.</div>
-                            <div class="message-time">9:25 AM</div>
-                        </div>
-                    </div>
-                `,
-                'Project Alpha': `
-                    <div class="message">
-                        <div class="message-content">
-                            <div class="text">Team meeting at 3 PM today in Conference Room A</div>
-                            <div class="message-time">8:00 AM</div>
-                        </div>
-                    </div>
-                    <div class="my message">
-                        <div class="message-content">
-                            <div class="text">Got it! I'll prepare the status update.</div>
-                            <div class="message-time">8:05 AM</div>
-                        </div>
-                    </div>
-                `
-            };
-
-            // Use existing messages or load new ones
-            if (chatMessages[chatName]) {
-                messageContainer.innerHTML = chatMessages[chatName];
-            } else {
-                // Default message for new chats
-                messageContainer.innerHTML = `
-                    <div style="text-align: center; padding: 50px; color: var(--text-secondary);">
-                        <div style="font-size: 48px; margin-bottom: 20px;"><i class="fas fa-comment"></i></div>
-                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">Start a conversation</div>
-                        <div>Send a message to begin chatting with ${chatName}</div>
-                    </div>
-                `;
-            }
-
-            messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
         // Send message
@@ -477,11 +447,31 @@
 
             if (text === '') return;
 
+            // Check if private message needs recipient
+            if (currentMessageType === 'private') {
+                const recipient = document.getElementById('recipientSelect').value;
+                if (!recipient) {
+                    alert('Please select a recipient for private message.');
+                    return;
+                }
+            }
+
             const messagesContainer = document.getElementById('messageContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'my message';
+
+            if (currentMessageType === 'private') {
+                messageDiv.classList.add('private-message');
+            }
+
+            const messageTypeLabel = currentMessageType === 'private' ? 'Private' : 'Public';
+
             messageDiv.innerHTML = `
                 <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">You</span>
+                        <span>${messageTypeLabel}</span>
+                    </div>
                     <div class="text">${text}</div>
                     <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
@@ -493,13 +483,13 @@
             messageInput.value = '';
             adjustHeight(messageInput);
 
-            // Simulate a response (in a real app, this would come from the server)
+            // Simulate a response
             setTimeout(() => {
                 simulateResponse(messagesContainer);
             }, 1000 + Math.random() * 2000);
         }
 
-        // Simulate a response message
+        // Simulate response message
         function simulateResponse(container) {
             const responses = [
                 "That sounds great!",
@@ -512,11 +502,19 @@
                 "Understood, thanks for clarifying."
             ];
 
+            const users = ['Alice Johnson', 'Bob Smith', 'Diana Prince', 'Eve Wilson'];
+            const randomUser = users[Math.floor(Math.random() * users.length)];
+            const responseText = responses[Math.floor(Math.random() * responses.length)];
+
             const responseDiv = document.createElement('div');
             responseDiv.className = 'message';
             responseDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="text">${responses[Math.floor(Math.random() * responses.length)]}</div>
+                    <div class="message-header">
+                        <span class="message-sender">${randomUser}</span>
+                        <span>Public</span>
+                    </div>
+                    <div class="text">${responseText}</div>
                     <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
             `;
@@ -539,12 +537,6 @@
             element.style.height = element.scrollHeight + 'px';
         }
 
-        // Toggle chat info
-        function toggleChatInfo() {
-            console.log('Toggle chat info panel');
-            alert('Chat info panel would toggle here!');
-        }
-
         // Add emoji function
         function addEmoji() {
             const messageInput = document.getElementById('messageInput');
@@ -555,16 +547,6 @@
             messageInput.focus();
             adjustHeight(messageInput);
         }
-
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', function () {
-            // Focus on message input
-            document.getElementById('messageInput').focus();
-
-            // Set initial scroll position
-            const messageContainer = document.getElementById('messageContainer');
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        });
     </script>
 </body>
 
