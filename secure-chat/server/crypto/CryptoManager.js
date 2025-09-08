@@ -1,8 +1,11 @@
 var crypto = require('crypto');
 var {promisify} = require('util');
 
+/* CryptoManager handles crypto operations include key generation, encryption,  decryption, 
+signing, and verification using RSA algorithms with OAEP padding and PSS signatures */
 class CryptoManager{
     constructor(){
+        //crypto algorithms configuration
         this.ALGORITHMS ={
             RSA:{
                 OAEP: {
@@ -15,20 +18,11 @@ class CryptoManager{
                     hash: 'sha256',
                     saltLength: 32
                 }
-            },
-            AES: {
-                GCM: {
-                    //reference: https://www.reddit.com/r/cryptography/comments/11wvpdu/can_the_length_of_an_aesgcm_output_be_predicted/
-                    keyLength: 32, //256 bits
-                    ivLength: 12, //initialise vector 96 bits
-                    tagLength:16   //128 bits
-                }
             }
         };
     }
 
     //reference: https://stackoverflow.com/questions/8520973/how-to-create-a-pair-private-public-keys-using-node-js-crypto
-   
     //generate RSA key pair 
     async generateRSAKeyPair(){
         const generateKeyPair = promisify(crypto.generateKeyPair);
@@ -47,7 +41,6 @@ class CryptoManager{
 
     //reference: https://medium.com/@bagdasaryanaleksandr97/understanding-base64-vs-base64-url-encoding-whats-the-difference-31166755bc26
     //https://hyunbinseo.medium.com/base64-in-node-js-and-browser-c7fba48ae033
-    
     //base64url encoding with no padding 
     base64urlEncode(buffer){
         return buffer.toString('base64')
@@ -67,77 +60,33 @@ class CryptoManager{
         return Buffer.from(str, 'base64');
     }
 
-    //generate random AES key 
-    generateAESKey(){
-        return crypto.randomBytes(this.ALGORITHMS.AES.GCM.keyLength);
-    }
-
-    //generate random IV (initialise vector) for AES-GCM
-    generateIV(){
-        return crypto.randomBytes(this.ALGORITHMS.AES.GCM.ivLength); 
-    }
-
-    //reference: https://gist.github.com/sohamkamani/b14a9053551dbe59c39f83e25c829ea7
-    //wrap AES key with RSA public key (RSA-OAEP)
-    wrapAESKey(aesKey, publicKey){
+    //encrypts plaintext using RSA-OAEP with a public key 
+    encryptRSA(plaintext, publicKey){
         const publicKeyObj = crypto.createPublicKey(publicKey);
-        const wrappedKey = crypto.publicEncrypt(
+        const encrypted = crypto.publicEncrypt(
             {
                 key: publicKeyObj,
                 padding: this.ALGORITHMS.RSA.OAEP.padding,
                 oaepHash: this.ALGORITHMS.RSA.OAEP.hash
             },
-            aesKey
+            Buffer.from(plaintext, 'utf8')
         );
-    return this.base64urlEncode(wrappedKey);
+        return this.base64urlEncode(encrypted);
     }
 
-    //unwrap AES key with RSA private key
-    unwrapAESKey(wrappedKeyBase64, privateKey){
-        const wrappedKey = this.base64urlDecode(wrappedKeyBase64);
+    //decrypts ciphertext using RSA-OAEP with a private key
+    decryptRSA(ciphertextBase64, privateKey){
+        const ciphertext = this.base64urlDecode(ciphertextBase64);
         const privateKeyObj = crypto.createPrivateKey(privateKey);
-
-        return crypto.privateDecrypt(
+        const decrypted = crypto.privateDecrypt(
             {
                 key: privateKeyObj,
                 padding: this.ALGORITHMS.RSA.OAEP.padding,
                 oaepHash: this.ALGORITHMS.RSA.OAEP.hash
             },
-            wrappedKey
+            ciphertext
         );
-    }
-
-    //reference: https://medium.com/@tony.infisical/guide-to-nodes-crypto-module-for-encryption-decryption-65c077176980
-    //          https://mojoauth.com/encryption-decryption/aes-256-encryption--nodejs/
-    //encrypt message with AES-GCM
-    encryptAESGCM(plaintext, aesKey, iv){
-        const cipher = crypto.createCipheriv('aes-256-gcm', aesKey, iv);
-        const encrypted = Buffer.concat([
-            cipher.update(plaintext, 'utf8'),
-            cipher.final()
-        ]);
-        const tag = cipher.getAuthTag();
-
-        return {
-            ciphertext: this.base64urlEncode(encrypted),
-            iv: this.base64urlEncode(iv),
-            tag: this.base64urlEncode(tag)
-        };
-    }
-
-    //decrypt message with AES-GCM
-    decryptAESGCM(ciphertextBase64, aesKey, ivBase64, tagBase64){
-        const ciphertext = this.base64urlDecode(ciphertextBase64);
-        const iv = this.base64urlDecode(ivBase64);
-        const tag = this.base64urlDecode(tagBase64);
-
-        const decipher = crypto.createDecipheriv('aes-256-gcm', aesKey, iv);
-        decipher.setAuthTag(tag);
-
-        return Buffer.concat([
-            decipher.update(ciphertext),
-            decipher.final()
-        ]).toString('utf8');
+        return decrypted.toString('utf8');
     }
 
     //create digital signature (RSASSA-PSS)
@@ -172,17 +121,17 @@ class CryptoManager{
     }
 
     //create content signature for messages 
-    createContentSigDM(ciphertext, iv, tag, wrappedKey, privateKey){
+    createContentSigDM(ciphertext, from, to, ts, privateKey){
         const dataToSign = this.concatBuffersForSigning(
-            ciphertext, iv, tag, wrappedKey
+            ciphertext, from, to, ts
         );
         return this.createSignature(dataToSign, privateKey);  
     }
 
     //verify content signature for messages 
-    verifyContentSigDM(ciphertext, iv, tag, wrappedKey, signature, publicKey){
+    verifyContentSigDM(ciphertext, from, to, ts, signature, publicKey){
         const dataToVerify = this.concatBuffersForSigning(
-            ciphertext, iv, tag, wrappedKey
+            ciphertext, from, to, ts
         );
         return this.verifySignature(dataToVerify, signature, publicKey);
     }
@@ -204,23 +153,15 @@ class CryptoManager{
 
     //reference: https://medium.com/@tony.infisical/guide-to-web-crypto-api-for-encryption-decryption-1a2c698ebc25
     //https://stackoverflow.com/questions/41266976/unsupported-state-or-unable-to-authenticate-data-with-aes-128-gcm-in-node
-    //encryption for private messages 
+    //encrypts a private message and creates a content signature
     async encryptPrivateMessage(plaintext, recipientPublicKey, senderPrivateKey, from, to){
-        //generate AES key and IV
-        const aesKey = this.generateAESKey();
-        const iv = this.generateIV();
-
-        //encrypt message 
-        const { ciphertext, iv: ivBase64, tag } = this.encryptAESGCM(plaintext, aesKey, iv);
-
-        //wrap AES key 
-        const wrappedKey = this.wrapAESKey(aesKey, recipientPublicKey);
+        
+        //encrypt message with RSA
+        const ciphertext = this.encryptRSA(plaintext, recipientPublicKey);
 
         //create content signature 
         const dataToSign = this.concatBuffersForSigning(
-            this.base64urlDecode(ciphertext),
-            this.base64urlDecode(ivBase64),
-            this.base64urlDecode(tag),
+            ciphertext,
             from, 
             to, 
             Date.now()
@@ -230,27 +171,22 @@ class CryptoManager{
         
         return{
             ciphertext,
-            iv: ivBase64,
-            tag,
-            wrapped_key: wrappedKey,
             content_sig: contentSig
         };
     }
 
-    //decryption for private messages
+    //decrypts a private message and verifies the content signature
     async decryptPrivateMessage(encryptedData, recipientPrivateKey, senderPublicKey){
-        const{ ciphertext, iv, tag, wrapped_key, content_sig } = encryptedData;
+        
+        const{ ciphertext, content_sig } = encryptedData;
 
         try{
-            //unwrap AES key
-            const aesKey = this.unwrapAESKey(wrapped_key, recipientPrivateKey);
-
             //verify content signature
-            const signatureValid = this.concatBuffersForSigning(
-                this.base64urlDecode(ciphertext),
-                this.base64urlDecode(iv),
-                this.base64urlDecode(tag),
-                this.base64urlDecode(wrapped_key),
+            const signatureValid = this.verifyContentSigDM(
+                ciphertext,
+                encryptedData.from,
+                encryptedData.to,
+                encryptedData.ts,
                 content_sig,
                 senderPublicKey
             );
@@ -259,8 +195,8 @@ class CryptoManager{
                 throw new Error('Invalid content signature');
             }
 
-            //decrypt message 
-            const plaintext = this.decryptAESGCM(ciphertext, aesKey, iv, tag);
+            //decrypt message with RSA 
+            const plaintext = this.decryptRSA(ciphertext, recipientPrivateKey);
 
             return plaintext;
         } catch(error){
