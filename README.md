@@ -7,3 +7,10 @@
 
 ## How to Test
 To run the tests, execute: `node test-crypto.js`
+
+## Collaborators:
+- Samira Hazara
+- Demi Papazoglou
+- Caitlin Joyce Martyr
+- Amber Yaa Wen Chew
+- Grace Baek 
