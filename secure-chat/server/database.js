@@ -1,7 +1,6 @@
 const { MongoClient } = require("mongodb");
 
 const uri = "mongodb+srv://28_admin:UzSNxWdBjBjtohWi@28test.fphel12.mongodb.net/?retryWrites=true&w=majority&appName=28Test";
-//const client = new MongoClient(uri);
 var client;
 
 class DatabaseManager {
@@ -9,15 +8,16 @@ class DatabaseManager {
 
 	}
 
-	//collection is either 'users', 'messages', or 'groups'
-	//should return null if user does not exist - double check this
+	// returns null if user does not exist
+	// use then to resolve promise:
+	// eg: dbManager.getUsername("test2").then(function(value) {console.log(value)});
 	async getUser(username) {
 	try {
 		client = new MongoClient(uri);
 		const database = client.db('28test');
-		const collection = database.collection('users');
-		const response = await collection.findOne({ 'username': username});
-		return (response);
+		const users = database.collection('users');
+		const query = await users.findOne({ 'username': username });
+		return(query);
 	} finally {
 		await client.close();
 	}
