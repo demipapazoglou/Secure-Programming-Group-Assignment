@@ -11,8 +11,8 @@ var usersRouter = require('./routes/users');
 var app = express();
 
 //initialise crypto utilities
-var CryptoManager = require('../crypto/CryptoManager');
-var MessageSigner = require('../crypto/MessageSigner');
+var CryptoManager = require('./crypto/CryptoManager');
+var MessageSigner = require('./crypto/MessageSigner');
 
 const cryptoManager = new CryptoManager();
 const messageSigner = new MessageSigner(cryptoManager);
