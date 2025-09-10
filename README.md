@@ -7,11 +7,6 @@
 - Amber Yaa Wen Chew
 - Grace Baek 
 
-## Files Included
-- `crypto/CryptoManager.js` – Handles encryption, decryption, and key management 
-- `crypto/MessageSigner.js` – Signs and verifies message envelopes 
-- `test-crypto.js` -  Test file for verifying the functionality of `CryptoManager.js` and `MessageSigner.js`.
-
 ## Dependencies 
 `npm install` 
 
@@ -21,3 +16,8 @@ Start the application:
 
 Run the crypto test:
 `node test-crypto.js`
+
+## Files Included
+- `crypto/CryptoManager.js` – Handles encryption, decryption, and key management 
+- `crypto/MessageSigner.js` – Signs and verifies message envelopes 
+- `test-crypto.js` -  Test file for verifying the functionality of `CryptoManager.js` and `MessageSigner.js`.
