@@ -49,7 +49,6 @@ class DatabaseManager {
 			return (null); //user dne
 		this.getUser(messageDetails.from).then(function(value) {
 			query['from'] = value["_id"];
-			console.log()
 		});
 		this.getUser(messageDetails.to).then(function(value) {
 			query['to'] = value["_id"];
@@ -58,6 +57,30 @@ class DatabaseManager {
     		if (err) throw err;
     		database.close();
   		});
+	}
+
+	//returns messages in ascending time order
+	async getMessageFromTo(from, to) {
+		const database = client.db('28test');
+		const collection = database.collection('messages');
+		const query = {};
+		
+		this.getUser(from).then(function(value) {
+			if (value != null)
+				query['from'] = value["_id"];
+			else
+				return(null);
+		});
+		this.getUser(to).then(function(value) {
+			if (value != null)
+				query['to'] = value["_id"];
+			else
+				return (null);
+		});
+		
+		const result = await collection.find(query).sort({'time': 1}).toArray();
+		console.log(result);
+		return (result);
 	}
 
 	async endClient() {
