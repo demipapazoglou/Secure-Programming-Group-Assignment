@@ -21,6 +21,10 @@ const messageSigner = new MessageSigner(cryptoManager);
 app.locals.cryptoManager = cryptoManager;
 app.locals.messageSigner = messageSigner;
 
+//database
+var DatabaseManager = require('./database');
+const dbManager = new DatabaseManager();
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
