@@ -15,14 +15,13 @@ Chat28 is a secure, real-time public chat platform that supports both one-to-one
 - Database: ??
 - Security tools/libraries: ???
 
-## Installation and Setup 
-To install dependencies, run: `npm install` 
-To launch the program, run: `npm start`
+## Installation and Setup
+1. Clone this repository in your local machine: `git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git`
+2. Navigate to the root directory: `cd secure-chat`
+3. To install dependencies, run: `npm install` 
+4. To launch the program, run: `npm start`
 
 ## Program Usage
-Start the application:
-`npm start` 
-
 Run the crypto test:
 `node test-crypto.js`
 
