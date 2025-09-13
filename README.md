@@ -1,5 +1,5 @@
 # Chat28
-Chat28 is asecure, real-time public chat platform that supports both one-to-one and group messaging. Designed with a primary focus on security and privacy, Chat28 provides an applictaion where users can communicate with confidence. 
+Chat28 is a secure, real-time public chat platform that supports both one-to-one and group messaging. Designed with a primary focus on security and privacy, Chat28 provides an applictaion where users can communicate with confidence. 
 
 ## Features
 - One-to-one private messaging
@@ -11,6 +11,7 @@ Chat28 is asecure, real-time public chat platform that supports both one-to-one 
 ## Technical Stack
 - Programming Languages used: HTML, CSS, JavaScript, C++
 - Framework: Websocket
+- Encryption: RSA
 - Database: ??
 - Security tools/libraries: ???
 
