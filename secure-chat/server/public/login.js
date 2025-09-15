@@ -25,7 +25,7 @@ new Vue({
       try {
         const response = await axios.post('/api/login', this.loginData);
         alert(response.data.message || 'Login successful!');
-        window.location.href = '/profile';
+        window.location.href = '/chat.html'; 
       } catch (error) {
         console.error('Login error:', error);
         alert(error.response?.data?.message || 'Login failed.');

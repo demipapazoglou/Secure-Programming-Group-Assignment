@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ChatNow - Login</title>
+  <title>Chat28</title>
   <link rel="stylesheet" href="stylesheets/login.css">
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="/secure-chat/server/routes/login.js" defer></script>
+  <script src="login.js" defer></script>
 </head>
 <body>
   <div id="login-app">
@@ -17,7 +17,7 @@
         <div class="login-inner">
           <div class="login-text">Username / Email</div>
           <div class="input-box">
-            <input type="text" v-model="loginData.email" placeholder="Enter your username or email" required>
+            <input type="text" v-model="loginData.identifier" placeholder="Enter your username or email" required>
           </div>
         </div>
         <div class="login-inner">
