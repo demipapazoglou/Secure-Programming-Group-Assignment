@@ -1,58 +1,69 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+require('dotenv').config(); // load secrets from .env file
+
+var createError   = require('http-errors');
+var express       = require('express');
+var path          = require('path');
+var cookieParser  = require('cookie-parser');
+var logger        = require('morgan');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-// var chatRouter = require('./routes/chat');
 
 var app = express();
 
-//initialise crypto utilities
+// ---------- CRYPTO UTILS ----------
+// these are our helper classes for RSA, signatures, etc.
 var CryptoManager = require('./crypto/CryptoManager');
 var MessageSigner = require('./crypto/MessageSigner');
 
 const cryptoManager = new CryptoManager();
 const messageSigner = new MessageSigner(cryptoManager);
 
-//make them available to routes
+// stick them into app.locals so any route or ws server can access
 app.locals.cryptoManager = cryptoManager;
 app.locals.messageSigner = messageSigner;
 
-//database
-var DatabaseManager = require('./database');
+// ---------- DATABASE ----------
+// connect to MongoDB through our DatabaseManager class
+const DatabaseManager = require('./database');
 const dbManager = new DatabaseManager();
+app.locals.db = dbManager; // make db available everywhere
 
-// view engine setup
+// ---------- VIEW ENGINE ----------
+// we're still keeping ejs views even though most of our frontend is static
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// ---------- MIDDLEWARE ----------
+// NOTE: body parsers must come *before* the /api routes, otherwise req.body will be empty
+app.use(logger('dev'));                          // request logging
+app.use(express.json());                         // parse JSON bodies
+app.use(express.urlencoded({ extended: false }));// parse form bodies
+app.use(cookieParser());                         // read cookies
+app.use(express.static(path.join(__dirname, 'public'))); // serve static files (login.html, chat.html, css, js)
 
+// ---------- AUTH ROUTES ----------
+// REST endpoints for signup/login/logout (mounted after parsers)
+const authRoutes = require('./routes/auth')(dbManager);
+app.use('/api', authRoutes);
+
+// ---------- ROUTES ----------
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+// app.use('/chat', chatRouter); // commented out for now
 
-//added char routes
-// app.use('/chat', chatRouter);
-
+// ---------- ERROR HANDLING ----------
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
+// error handler (will render error.ejs)
+app.use(function (err, req, res, next) {
+  // only show stacktrace in dev mode
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
   res.status(err.status || 500);
   res.render('error');
 });

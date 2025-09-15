@@ -1,54 +1,62 @@
 new Vue({
   el: '#login-app',
   data: {
-    sign_up: false,
-    loggedIn: false,
-    // must match v-model in signup form
-    signupData: {
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
-    },
-    // must match v-model in login form
-    loginData: {
-      identifier: '', // matches v-model in index.html
-      password: ''
-    }
+    sign_up: false,  // set to true temporarily to land on Sign Up first
+    signupData: { username: '', email: '', password: '', confirmPassword: '' },
+    loginData: { identifier: '', password: '' }
+  },
+  created() {
+    console.log('[vue] created, initial state:', JSON.parse(JSON.stringify(this.$data)));
   },
   methods: {
-    toggleSignUp() {
-      this.sign_up = !this.sign_up;
-    },
-
-    async handleLogin() {
-      try {
-        const response = await axios.post('/api/login', this.loginData);
-        alert(response.data.message || 'Login successful!');
-        window.location.href = '/chat.html'; 
-      } catch (error) {
-        console.error('Login error:', error);
-        alert(error.response?.data?.message || 'Login failed.');
-      }
+    toggleSignUp() { 
+      this.sign_up = !this.sign_up; 
+      console.log('[vue] toggled sign_up ->', this.sign_up);
     },
 
     async handleSignup() {
-      if (this.signupData.password !== this.signupData.confirmPassword) {
-        alert("Passwords do not match!");
-        return;
-      }
+      console.log('[signup] preflight data:', JSON.parse(JSON.stringify(this.signupData)));
+
+      const u = (this.signupData.username || '').trim();
+      const e = (this.signupData.email || '').trim();
+      const p = this.signupData.password || '';
+      const c = this.signupData.confirmPassword || '';
+
+      if (!u || !e || !p) return alert('Please fill out all fields.');
+      if (p !== c) return alert('Passwords do not match!');
 
       try {
-        const response = await axios.post('/api/signup', {
-          username: this.signupData.username,
-          email: this.signupData.email,
-          password: this.signupData.password
-        });
-        alert(response.data.message || 'Signup successful!');
-        this.sign_up = false; // go back to login form
-      } catch (error) {
-        console.error('Signup error:', error);
-        alert(error.response?.data?.message || 'Signup failed.');
+        const res = await axios.post('/api/signup',
+          { username: u, email: e, password: p },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        console.log('[signup] server response:', res.data);
+        alert(res.data?.message || 'Signup successful!');
+        window.location.href = '/chat.html';
+      } catch (err) {
+        console.error('[signup] error:', err?.response?.data || err.message);
+        alert(err?.response?.data?.message || 'Signup failed.');
+      }
+    },
+
+    async handleLogin() {
+      console.log('[login] preflight data:', JSON.parse(JSON.stringify(this.loginData)));
+
+      const id = (this.loginData.identifier || '').trim();
+      const pw = this.loginData.password || '';
+      if (!id || !pw) return alert('Please enter your username/email and password.');
+
+      try {
+        const res = await axios.post('/api/login',
+          { identifier: id, password: pw },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        console.log('[login] server response:', res.data);
+        alert(res.data?.message || 'Login successful!');
+        window.location.href = '/chat.html';
+      } catch (err) {
+        console.error('[login] error:', err?.response?.data || err.message);
+        alert(err?.response?.data?.message || 'Login failed.');
       }
     }
   }

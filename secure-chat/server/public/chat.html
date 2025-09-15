@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat28</title>
   <link rel="stylesheet" href="stylesheets/chat-style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
@@ -18,14 +19,15 @@
     <div class="top-controls">
       <button class="profile-btn" onclick="showProfile()"><i class="fa-solid fa-user"></i> Profile</button>
       <button class="mode-toggle" onclick="toggleMode()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
+      <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
     </div>
-  </div> 
+  </div>
 
   <div class="chat-container">
     <div class="navbar">
       <div class="logo"><i class="fa-solid fa-comment"></i> Chat28</div>
       <div class="user-count">
-        <i class="fa-solid fa-users"></i> Members Online
+        <i class="fa-solid fa-users"></i> <span id="memberCount">0</span> Members Online
       </div>
 
       <div class="section-title">Online Members</div>
@@ -33,6 +35,10 @@
 
       <div class="section-title" style="margin-top: 20px;">Offline Members</div>
       <div class="tab-content" id="offlineUsers"><!-- populated by WS --></div>
+
+      <div class="connection-status" id="connectionStatus">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...
+      </div>
     </div>
 
     <div class="main-chat">
@@ -43,10 +49,14 @@
         </div>
         <div class="chat-actions">
           <button class="action-btn" onclick="showChannelInfo()"><i class="fa-solid fa-circle-info"></i> Info</button>
+          <button class="action-btn" onclick="reconnectWebSocket()"><i class="fa-solid fa-refresh"></i>
+            Reconnect</button>
         </div>
       </div>
 
-      <div class="message-container" id="messageContainer"><!-- messages --></div>
+      <div class="message-container" id="messageContainer">
+        <div class="system-message">Welcome to Chat28! Connect with others in real-time.</div>
+      </div>
 
       <div class="message-input-container">
         <div class="message-type-selector">
@@ -60,7 +70,9 @@
 
         <div class="private-recipient-selector" id="recipientSelector">
           <div class="recipient-label">Send private message to:</div>
-          <select class="recipient-select" id="recipientSelect"><!-- filled by WS --></select>
+          <select class="recipient-select" id="recipientSelect">
+            <option value="">Select a user...</option>
+          </select>
         </div>
 
         <div class="input-wrapper">
@@ -80,22 +92,325 @@
           </div>
         </div>
       </div>
-    </div> <!-- /.chat-container -->
+    </div>
   </div>
 
   <script>
+    // Global variables
     let currentMessageType = 'public';
     let dragCounter = 0;
+    let ws = null;
+    let currentUsername = null;
+    let onlineUsers = new Set();
+    let reconnectInterval = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
 
+    // Initialise when page loads
     document.addEventListener('DOMContentLoaded', function () {
+      console.log('Page loaded, initialising chat...');
+
       const chatContainer = document.querySelector('.chat-container');
       chatContainer.addEventListener('dragenter', handleDragEnter);
       chatContainer.addEventListener('dragleave', handleDragLeave);
       chatContainer.addEventListener('dragover', handleDragOver);
       chatContainer.addEventListener('drop', handleDrop);
       document.getElementById('messageInput').focus();
+
+      // Get current user and then connect to WebSocket
+      getCurrentUser().then(() => {
+        connectWebSocket();
+      });
     });
 
+    // Get current user from server
+    async function getCurrentUser() {
+      try {
+        console.log('Getting current user...');
+        const response = await fetch('/api/me');
+        const data = await response.json();
+
+        if (data.authenticated) {
+          currentUsername = data.username;
+          console.log('Current user:', currentUsername);
+        } else {
+          console.log('User not authenticated, redirecting to login');
+          window.location.href = '/login.html';
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to get current user:', err);
+        window.location.href = '/login.html';
+      }
+    }
+
+    // WebSocket connection
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+
+      updateConnectionStatus('connecting');
+      console.log('Attempting to connect to:', wsUrl);
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function () {
+          console.log('WebSocket connected');
+          updateConnectionStatus('connected');
+          reconnectAttempts = 0;
+
+          // Send USER_HELLO to announce presence
+          sendWebSocketMessage('USER_HELLO', currentUsername, '*', {});
+        };
+
+        ws.onmessage = function (event) {
+          try {
+            const message = JSON.parse(event.data);
+            console.log('Received WebSocket message:', message);
+            handleWebSocketMessage(message);
+          } catch (err) {
+            console.error('Failed to parse WebSocket message:', err);
+          }
+        };
+
+        ws.onclose = function () {
+          console.log('WebSocket disconnected');
+          updateConnectionStatus('disconnected');
+
+          // Attempt to reconnect
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            console.log(`Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+            setTimeout(() => connectWebSocket(), 3000);
+          } else {
+            updateConnectionStatus('failed');
+          }
+        };
+
+        ws.onerror = function (error) {
+          console.error('WebSocket error:', error);
+          updateConnectionStatus('error');
+        };
+
+      } catch (err) {
+        console.error('Failed to create WebSocket connection:', err);
+        updateConnectionStatus('error');
+      }
+    }
+
+    function sendWebSocketMessage(type, from, to, payload) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = { type, from, to, payload };
+        ws.send(JSON.stringify(message));
+        console.log('Sent WebSocket message:', message);
+      } else {
+        console.error('WebSocket not connected, current state:', ws ? ws.readyState : 'undefined');
+        displaySystemMessage('Connection lost. Trying to reconnect...');
+      }
+    }
+
+    function handleWebSocketMessage(message) {
+      console.log('Handling message:', message);
+
+      switch (message.type) {
+        case 'ONLINE_LIST':
+          updateOnlineUsers(message.payload.online);
+          break;
+
+        case 'USER_ADVERTISE':
+          addOnlineUser(message.payload.user_id);
+          break;
+
+        case 'USER_REMOVE':
+          removeOnlineUser(message.payload.user_id);
+          break;
+
+        case 'USER_DELIVER':
+          displayPrivateMessage(message.payload.sender, message.payload.text);
+          break;
+
+        case 'USER_DELIVER_PUBLIC':
+          displayPublicMessage(message.payload.sender, message.payload.text);
+          break;
+
+        case 'ERROR':
+          handleWebSocketError(message.payload);
+          break;
+
+        default:
+          console.log('Unknown message type:', message.type);
+      }
+    }
+
+    function handleWebSocketError(payload) {
+      console.error('WebSocket error:', payload);
+
+      switch (payload.code) {
+        case 'UNAUTHENTICATED':
+          displaySystemMessage('Authentication required. Please log in.');
+          setTimeout(() => window.location.href = '/login.html', 2000);
+          break;
+
+        case 'NAME_IN_USE':
+          displaySystemMessage('Username already in use.');
+          break;
+
+        case 'IDENTITY_MISMATCH':
+          displaySystemMessage('Identity mismatch. Please refresh and try again.');
+          break;
+
+        default:
+          displaySystemMessage(`Error: ${payload.code}`);
+      }
+    }
+
+    function updateConnectionStatus(status) {
+      const statusEl = document.getElementById('connectionStatus');
+
+      switch (status) {
+        case 'connecting':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...';
+          statusEl.className = 'connection-status connecting';
+          break;
+        case 'connected':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #4CAF50;"></i> Connected';
+          statusEl.className = 'connection-status connected';
+          break;
+        case 'disconnected':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #ff9800;"></i> Reconnecting...';
+          statusEl.className = 'connection-status reconnecting';
+          break;
+        case 'error':
+        case 'failed':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #f44336;"></i> Connection failed';
+          statusEl.className = 'connection-status error';
+          break;
+      }
+    }
+
+    function updateOnlineUsers(users) {
+      console.log('Updating online users:', users);
+      onlineUsers = new Set(users);
+      const onlineEl = document.getElementById('onlineUsers');
+      const offlineEl = document.getElementById('offlineUsers');
+      const recipientSelect = document.getElementById('recipientSelect');
+
+      // Clear existing content
+      onlineEl.innerHTML = '';
+      recipientSelect.innerHTML = '<option value="">Select a user...</option>';
+
+      // Add online users
+      users.forEach(user => {
+        if (user !== currentUsername) { // show it doesn't show oneself as online 
+          // Add to online users list
+          const userEl = document.createElement('div');
+          userEl.className = 'user-item online';
+          userEl.innerHTML = `
+            <div class="user-avatar"></div>
+            <span class="user-name">${user}</span>
+            <button class="dm-btn" onclick="startPrivateChat('${user}')">DM</button>
+          `;
+          onlineEl.appendChild(userEl);
+
+          // Add to recipient select
+          const option = document.createElement('option');
+          option.value = user;
+          option.textContent = user;
+          recipientSelect.appendChild(option);
+        }
+      });
+
+      // Update member count
+      document.getElementById('memberCount').textContent = users.length;
+      document.getElementById('chatSubtitle').textContent = `${users.length} total members • ${users.length} online`;
+    }
+
+    function addOnlineUser(username) {
+      console.log('User joined:', username);
+      if (!onlineUsers.has(username)) {
+        onlineUsers.add(username);
+        updateOnlineUsers(Array.from(onlineUsers));
+        displaySystemMessage(`${username} joined the chat`);
+      }
+    }
+
+    function removeOnlineUser(username) {
+      console.log('User left:', username);
+      if (onlineUsers.has(username)) {
+        onlineUsers.delete(username);
+        updateOnlineUsers(Array.from(onlineUsers));
+        displaySystemMessage(`${username} left the chat`);
+      }
+    }
+
+    function displayPublicMessage(sender, text) {
+      console.log('Displaying public message from', sender + ':', text);
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = sender === currentUsername ? 'my message' : 'other message';
+
+      messageEl.innerHTML = `
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">${sender}</span>
+            <span>Public</span>
+          </div>
+          <div class="text">${escapeHtml(text)}</div>
+          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      `;
+
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function displayPrivateMessage(sender, text, direction) {
+      console.log('Displaying private message from', sender + ':', text);
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = (sender === currentUsername ? 'my message' : 'other message') + ' private-message';
+
+      // Determine the label based on direction
+      let label;
+      if (sender === currentUsername) {
+        label = direction || 'Private'; // Use direction if provided (e.g., "To username")
+      } else {
+        label = `From ${sender}`;
+      }
+
+      messageEl.innerHTML = `
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">${sender}</span>
+            <span>${label}</span>
+          </div>
+          <div class="text">${escapeHtml(text)}</div>
+          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      `;
+
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function displaySystemMessage(text) {
+      console.log('System message:', text);
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = 'system-message';
+      messageEl.textContent = text;
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // UI Functions
     function toggleMode() {
       const body = document.body;
       const modeBtn = document.querySelector('.mode-toggle');
@@ -108,15 +423,46 @@
       }
     }
 
-    function showProfile() {}
-    function showChannelInfo() {}
+    function showProfile() {
+      alert('Profile functionality to be updated');
+    }
+
+    function showChannelInfo() {
+      alert('Channel info functionality to be updated');
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        // Close WebSocket connection
+        if (ws) {
+          ws.close();
+        }
+
+        // Call logout API
+        fetch('/api/logout', { method: 'POST' })
+          .then(() => window.location.href = '/login.html')
+          .catch(() => window.location.href = '/login.html');
+      }
+    }
+
+    function reconnectWebSocket() {
+      if (ws) {
+        ws.close();
+      }
+      reconnectAttempts = 0;
+      connectWebSocket();
+    }
 
     function setMessageType(type, btn) {
       currentMessageType = type;
       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const sel = document.getElementById('recipientSelector');
-      if (type === 'private') sel.classList.add('active'); else sel.classList.remove('active');
+      if (type === 'private') {
+        sel.classList.add('active');
+      } else {
+        sel.classList.remove('active');
+      }
     }
 
     function startPrivateChat(userName) {
@@ -126,20 +472,74 @@
       document.getElementById('messageInput').focus();
     }
 
-    // Drag & drop files
-    function handleDragEnter(e){ e.preventDefault(); dragCounter++; document.getElementById('dropZone').classList.add('active'); }
-    function handleDragLeave(e){ e.preventDefault(); dragCounter--; if (dragCounter===0) document.getElementById('dropZone').classList.remove('active'); }
-    function handleDragOver(e){ e.preventDefault(); }
-    function handleDrop(e){ e.preventDefault(); dragCounter=0; document.getElementById('dropZone').classList.remove('active'); handleFiles([...e.dataTransfer.files]); }
-    function triggerFileInput(){ document.getElementById('fileInput').click(); }
-    function handleFileSelect(e){ handleFiles([...e.target.files]); e.target.value=''; }
-    function handleFiles(files){ files.forEach(displayFileMessage); }
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
 
-    function displayFileMessage(file){
+      console.log('Sending message:', text, 'Type:', currentMessageType);
+
+      if (currentMessageType === 'public') {
+        // Send public message - don't display locally, wait for server echo
+        sendWebSocketMessage('MSG_PUBLIC_CHANNEL', currentUsername, 'public', { text });
+      } else {
+        // Send private message
+        const recipient = document.getElementById('recipientSelect').value;
+        if (!recipient) {
+          alert('Please select a recipient for private message');
+          return;
+        }
+
+        sendWebSocketMessage('MSG_DIRECT', currentUsername, recipient, { text });
+        displayPrivateMessage(currentUsername, text, `To ${recipient}`);
+      }
+
+      input.value = '';
+      adjustHeight(input);
+    }
+
+    // File handling
+    function handleDragEnter(e) {
+      e.preventDefault();
+      dragCounter++;
+      document.getElementById('dropZone').classList.add('active');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) document.getElementById('dropZone').classList.remove('active');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      dragCounter = 0;
+      document.getElementById('dropZone').classList.remove('active');
+      handleFiles([...e.dataTransfer.files]);
+    }
+
+    function triggerFileInput() {
+      document.getElementById('fileInput').click();
+    }
+
+    function handleFileSelect(e) {
+      handleFiles([...e.target.files]);
+      e.target.value = '';
+    }
+
+    function handleFiles(files) {
+      files.forEach(displayFileMessage);
+    }
+
+    function displayFileMessage(file) {
       const c = document.getElementById('messageContainer');
       const d = document.createElement('div');
       d.className = 'my message';
-      const tag = currentMessageType==='private' ? 'Private' : 'Public';
+      const tag = currentMessageType === 'private' ? 'Private' : 'Public';
       d.innerHTML = `
         <div class="message-content">
           <div class="message-header">
@@ -148,36 +548,31 @@
           <div class="text">Shared a file: ${file.name}</div>
           <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>`;
-      c.appendChild(d); c.scrollTop = c.scrollHeight;
+      c.appendChild(d);
+      c.scrollTop = c.scrollHeight;
     }
 
-    function sendMessage() {
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const c = document.getElementById('messageContainer');
-      const d = document.createElement('div');
-      d.className = 'my message' + (currentMessageType==='private' ? ' private-message' : '');
-      const tag = currentMessageType==='private' ? 'Private' : 'Public';
-      d.innerHTML = `
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-sender">You</span><span>${tag}</span>
-          </div>
-          <div class="text">${text}</div>
-          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>`;
-      c.appendChild(d); c.scrollTop = c.scrollHeight;
-
-      input.value = '';
-      adjustHeight(input);
-      // TODO: send over WebSocket here
+    // Utility functions
+    function handleKeyPress(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     }
 
-    function handleKeyPress(e){ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
-    function adjustHeight(el){ el.style.height='auto'; el.style.height = el.scrollHeight+'px'; }
-    function addEmoji(){ const el = document.getElementById('messageInput'); const emojis=['😊','😄','😍','🤔','👍','👎','❤️','🔥','💯','🎉']; el.value += emojis[Math.floor(Math.random()*emojis.length)]; el.focus(); adjustHeight(el); }
+    function adjustHeight(el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+
+    function addEmoji() {
+      const el = document.getElementById('messageInput');
+      const emojis = ['😊', '😄', '😍', '🤔', '👍', '👎', '❤️', '🔥', '💯', '🎉'];
+      el.value += emojis[Math.floor(Math.random() * emojis.length)];
+      el.focus();
+      adjustHeight(el);
+    }
   </script>
 </body>
+
 </html>

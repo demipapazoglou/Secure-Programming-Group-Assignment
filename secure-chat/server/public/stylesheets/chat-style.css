@@ -651,3 +651,242 @@ body {
     border-radius: 0;
   }
 }
+
+/* Additional styles for WebSocket functionality */
+
+/* Logout button */
+.logout-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #e74c3c;
+  color: var(--text-light);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2);
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3);
+  background: #c0392b;
+}
+
+/* Connection status indicator */
+.connection-status {
+  margin-top: auto;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  transition: all 0.3s ease;
+}
+
+.connection-status.connecting {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+}
+
+.connection-status.connected {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #4caf50;
+}
+
+.connection-status.reconnecting {
+  background: rgba(255, 152, 0, 0.2);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+.connection-status.error {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.3);
+  color: #f44336;
+}
+
+/* User avatar placeholder */
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin-right: 12px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.user-avatar::before {
+  content: '👤';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* DM button for user items */
+.dm-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  color: var(--text-light);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  z-index: 2;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dm-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* System messages */
+.system-message {
+  text-align: center;
+  padding: 12px 20px;
+  margin: 10px 0;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  font-size: 13px;
+  font-style: italic;
+  border: 1px solid var(--border-color);
+  opacity: 0.8;
+}
+
+/* Message content styling */
+.message-content {
+  width: 100%;
+}
+
+.text {
+  margin: 8px 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+/* File Transfer Styles */
+
+.file-transfer {
+  border-left: 4px solid #3498db;
+}
+
+.file-transfer-content {
+  margin: 10px 0;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.file-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  border-radius: 8px;
+  font-size: 20px;
+  color: white;
+}
+
+.file-details {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.file-size {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.transfer-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0 4px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2ecc71);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.download-link {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.download-link:hover {
+  background: rgba(52, 152, 219, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .file-name {
+  color: var(--text-light);
+}
+
+[data-theme="dark"] .progress-bar {
+  background-color: #444;
+}
+
+[data-theme="dark"] .download-link {
+  color: #5dade2;
+  background: rgba(93, 173, 226, 0.1);
+  border-color: rgba(93, 173, 226, 0.3);
+}
+
+[data-theme="dark"] .download-link:hover {
+  background: rgba(93, 173, 226, 0.2);
+}
