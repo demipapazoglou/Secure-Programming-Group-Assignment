@@ -62,9 +62,22 @@ cd secure-chat/server
 npm install
 ```
 
-### 4. Set up the Database 
+### 4. Set up Environment Variables
 ```bash
-# Database installation instructions to be added
+# Create a .env file in the server directory and add the following configuration:
+
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://28_admin:UzSNxWdBjBjtohWi@28test.fphel12.mongodb.net/?retryWrites=true&w=majority&appName=28Test
+MONGO_DB=28test
+
+# JWT Configuration
+JWT_SECRET=super-secure-jwt-secret-key-at-least-32-characters-long-for-production-use
+JWT_COOKIE_NAME=chat28_token
+JWT_ISSUER=chat28
+
+# Server Settings 
+PORT=3000
+NODE_ENV=development
 ```
 
 ### 5. Start the Server 
