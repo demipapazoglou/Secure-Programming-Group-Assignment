@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - Chat28</title>
+    <link rel="stylesheet" href="stylesheets/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+</head>
+
+<body data-theme="light">
+    <div class="navbar-top">
+        <div class="page-title">Profile Settings</div>
+        <div class="top-controls">
+            <a href="chat.html" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Chat
+            </a>
+            <button class="mode-toggle" onclick="toggleMode()">
+                <i class="fa-solid fa-moon"></i> Dark Mode
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <div class="avatar-image" onclick="triggerAvatarUpload()">
+                    <i class="fa-solid fa-user"></i>
+                    <div class="avatar-overlay">
+                        <i class="fa-solid fa-camera" style="color: white; font-size: 24px;"></i>
+                    </div>
+                </div>
+                <input type="file" class="avatar-upload" id="avatarUpload" accept="image/*"
+                    onchange="handleAvatarUpload(event)">
+            </div>
+            <h1 class="profile-name" id="profileName">John Doe</h1>
+            <p class="profile-email" id="profileEmail">john.doe@example.com</p>
+            <div class="status-indicator status-online" id="statusIndicator">
+                <i class="fa-solid fa-circle"></i>
+                Online
+            </div>
+        </div>
+
+        <div class="settings-grid">
+            <!-- Personal Information -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-user"></i>
+                    Personal Information
+                </h2>
+                <form onsubmit="savePersonalInfo(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-input" id="firstName" value="John" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-input" id="lastName" value="Doe" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" class="form-input" id="displayName" value="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="email" value="john.doe@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-input form-textarea" id="bio"
+                            placeholder="Tell us about yourself...">Software developer passionate about secure communication and user privacy.</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save"></i>
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Account Settings -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-cog"></i>
+                    Account Settings
+                </h2>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" onchange="updateStatus(this.value)">
+                        <option value="online" selected>Online</option>
+                        <option value="away">Away</option>
+                        <option value="busy">Do Not Disturb</option>
+                        <option value="invisible">Invisible</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Privacy Settings -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Privacy & Security
+                </h2>
+                <div class="switch-container">
+                    <label class="form-label">Allow private messages from anyone</label>
+                    <label class="switch">
+                        <input type="checkbox" id="pmPermission" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Show online status to others</label>
+                    <label class="switch">
+                        <input type="checkbox" id="showStatus" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Enable read receipts</label>
+                    <label class="switch">
+                        <input type="checkbox" id="readReceipts">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Allow file transfers</label>
+                    <label class="switch">
+                        <input type="checkbox" id="fileTransfers" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-bell"></i>
+                    Notifications
+                </h2>
+                <div class="switch-container">
+                    <label class="form-label">Desktop notifications</label>
+                    <label class="switch">
+                        <input type="checkbox" id="desktopNotif" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Notification preview</label>
+                    <label class="switch">
+                        <input type="checkbox" id="notifPreview">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-lock"></i>
+                    Security
+                </h2>
+                <div class="security-warning">
+                    <div class="security-warning-text">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        Two-factor authentication is recommended for enhanced account security.
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary" onclick="changePassword()">
+                        <i class="fa-solid fa-key"></i>
+                        Change Password
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="setup2FA()">
+                        <i class="fa-solid fa-shield-check"></i>
+                        Setup Two-Factor Authentication
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="viewSessions()">
+                        <i class="fa-solid fa-devices"></i>
+                        Manage Active Sessions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Danger Zone
+                </h2>
+                <div class="form-group">
+                    <label class="form-label">Export Account Data</label>
+                    <button type="button" class="btn btn-secondary" onclick="exportData()">
+                        <i class="fa-solid fa-download"></i>
+                        Export Data
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Delete Account</label>
+                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">
+                        <i class="fa-solid fa-trash"></i>
+                        Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark/Light Mode
+        function toggleMode() {
+            const body = document.body;
+            const modeBtn = document.querySelector('.mode-toggle');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                modeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                modeBtn.innerHTML = '<i class="fa-solid fa-moon"></i> Dark Mode';
+            }
+            localStorage.setItem('theme', body.getAttribute('data-theme'));
+        }
+
+        // Avatar Upload
+        function triggerAvatarUpload() {
+            document.getElementById('avatarUpload').click();
+        }
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const avatarImage = document.querySelector('.avatar-image');
+                    avatarImage.innerHTML = `
+                        <img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <div class="avatar-overlay">
+                            <i class="fa-solid fa-camera" style="color: white; font-size: 24px;"></i>
+                        </div>
+                    `;
+                    // send avatar change over websocket
+                    sendProfileUpdate({ avatar: e.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Save Personal Info
+        function savePersonalInfo(event) {
+            event.preventDefault();
+            const profileData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                displayName: document.getElementById('displayName').value,
+                email: document.getElementById('email').value,
+                bio: document.getElementById('bio').value
+            };
+            sendProfileUpdate(profileData);
+            alert('Profile updated!');
+        }
+
+        // Update Status
+        function updateStatus(status) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.className = 'status-indicator';
+            switch (status) {
+                case 'online':
+                    statusIndicator.classList.add('status-online');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Online';
+                    break;
+                case 'away':
+                    statusIndicator.classList.add('status-away');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Away';
+                    break;
+                case 'busy':
+                    statusIndicator.classList.add('status-busy');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-minus-circle"></i> Do Not Disturb';
+                    break;
+                case 'invisible':
+                    statusIndicator.classList.add('status-offline');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Invisible';
+                    break;
+            }
+            sendProfileUpdate({ status });
+        }
+
+        // Example WebSocket integration
+        let socket = new WebSocket("ws://localhost:3000");
+        socket.onopen = () => console.log("Connected to server");
+        socket.onmessage = (event) => console.log("Message from server:", event.data);
+
+        function sendProfileUpdate(data) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: "profileUpdate", data }));
+            }
+        }
+
+        // Placeholder actions
+        function changePassword() { alert('Password change dialog.'); }
+        function setup2FA() { alert('2FA setup dialog.'); }
+        function viewSessions() { alert('Manage sessions.'); }
+        function exportData() { alert('Export data process.'); }
+        function deleteAccount() { if (confirm('Delete your account?')) alert('Account deleted.'); }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            const modeBtn = document.querySelector('.mode-toggle');
+            if (savedTheme === 'dark') {
+                modeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+            }
+        });
+    </script>
+</body>
+
+</html>
