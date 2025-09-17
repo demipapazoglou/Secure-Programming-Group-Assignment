@@ -149,15 +149,6 @@ class CryptoManager{
         return JSON.stringify(obj, Object.keys(obj).sort());
     }
 
-    // //create content signature for messages 
-    // createContentSigDM(ciphertext, from, to, ts, privateKey){
-    //     const dataToSign = this.concatBuffersForSigning(
-    //         ciphertext, from, to, ts
-    //     );
-    //     return this.createSignature(dataToSign, privateKey);  
-    // }
-
-
     //create content signature for PUBLIC_CHANNEL_KEY_SHARE
     createKeyShareContentSig(shares, creator_pub, privateKey){
         const shareStr = JSON.stringify(shares);
