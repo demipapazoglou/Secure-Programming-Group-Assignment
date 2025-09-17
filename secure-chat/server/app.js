@@ -14,14 +14,11 @@ var app = express();
 // ---------- CRYPTO UTILS ----------
 // these are our helper classes for RSA, signatures, etc.
 var CryptoManager = require('./crypto/CryptoManager');
-var MessageSigner = require('./crypto/MessageSigner');
 
 const cryptoManager = new CryptoManager();
-const messageSigner = new MessageSigner(cryptoManager);
 
 // stick them into app.locals so any route or ws server can access
 app.locals.cryptoManager = cryptoManager;
-app.locals.messageSigner = messageSigner;
 
 // ---------- DATABASE ----------
 // connect to MongoDB through our DatabaseManager class
