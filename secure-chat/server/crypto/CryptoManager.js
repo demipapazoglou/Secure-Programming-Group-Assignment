@@ -16,7 +16,7 @@ class CryptoManager{
                 },
                 PSS: {
                     hash: 'sha256',
-                    saltLength: 32
+                    saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
                 }
             }
         };
@@ -46,7 +46,7 @@ class CryptoManager{
         return buffer.toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
-        .replace(/=/g, '');
+        .replace(/=/g, ''); //remove padding 
     }
     
     //reference: https://stackoverflow.com/questions/5234581/base64url-decoding-via-javascript
@@ -120,25 +120,60 @@ class CryptoManager{
         }, signature);
     }
 
-    //create content signature for messages 
-    createContentSigDM(ciphertext, from, to, ts, privateKey){
-        const dataToSign = this.concatBuffersForSigning(
-            ciphertext, from, to, ts
-        );
-        return this.createSignature(dataToSign, privateKey);  
+    //create content signature for MSG_PRIVATE
+    createPrivateMsgContentSig(ciphertext, from, to, ts, privateKey){
+        const dataToSign = this.concatForSigning(ciphertext, from, to, ts);
+        return this.createSignature(dataToSign, privateKey);
     }
 
-    //verify content signature for messages 
-    verifyContentSigDM(ciphertext, from, to, ts, signature, publicKey){
-        const dataToVerify = this.concatBuffersForSigning(
-            ciphertext, from, to, ts
-        );
+    //verify content signature for MSG_PRIVATE
+    verifyPrivateMsgContentSig(ciphertext, from, to, ts, signature, publicKey){
+        const dataToVerify = this.concatForSigning(ciphertext, from, to, ts);
+        return this.verifySignature(dataToVerify, signature, publicKey);
+    }
+
+    //create content signature for MSG_PUBLIC_CHANNEL
+    createPublicCHContentSig(ciphertext, from, ts, privateKey){
+        const dataToSign = this.concatForSigning(ciphertext, from, ts);
+        return this.createSignature(dataToSign, privateKey);
+    }
+
+    //verify content signature for MSG_PUBLIC_CHANNEL
+    verifyPublicCHContentSig(ciphertext, from, ts, signature, publicKey){
+        const dataToVerify = this.concatForSigning(ciphertext, from, ts);
+        return this.verifySignature(dataToVerify, signature, publicKey);
+    }
+
+    //canonicalise JSON for consistent envelope signing
+    canonicaliseJSON(obj){
+        return JSON.stringify(obj, Object.keys(obj).sort());
+    }
+
+    // //create content signature for messages 
+    // createContentSigDM(ciphertext, from, to, ts, privateKey){
+    //     const dataToSign = this.concatBuffersForSigning(
+    //         ciphertext, from, to, ts
+    //     );
+    //     return this.createSignature(dataToSign, privateKey);  
+    // }
+
+
+    //create content signature for PUBLIC_CHANNEL_KEY_SHARE
+    createKeyShareContentSig(shares, creator_pub, privateKey){
+        const shareStr = JSON.stringify(shares);
+        const dataToSign = this.concatForSigning(shareStr, creator_pub);
+        return this.createSignature(dataToSign, privateKey);
+    }
+
+    verifyKeyShareContentSig(shares, creator_pub, signature, publicKey){
+        const shareStr = JSON.stringify(shares);
+        const dataToVerify = this.concatForSigning(shareStr, creator_pub);
         return this.verifySignature(dataToVerify, signature, publicKey);
     }
 
     //reference: https://nodejs.org/api/buffer.html
     //helper func to concatenate data for signing 
-    concatBuffersForSigning(...elements){
+    concatForSigning(...elements){
         const buffers = elements.map(element => {
             if(typeof element === 'string'){
                 return Buffer.from(element, 'utf8');
@@ -151,6 +186,15 @@ class CryptoManager{
         return Buffer.concat(buffers);
     }
 
+    signEnvelope(payload, privateKey){
+        const canonicalPayload = this.canonicaliseJSON(payload);
+        return this.createSignature(canonicalPayload, privateKey);
+    }
+
+    verifyEnvelope(payload, signature, publicKey){
+        const canonicalPayload = this.canonicaliseJSON(payload);
+        return this.verifySignature(canonicalPayload, signature, publicKey);
+    }
     //reference: https://medium.com/@tony.infisical/guide-to-web-crypto-api-for-encryption-decryption-1a2c698ebc25
     //https://stackoverflow.com/questions/41266976/unsupported-state-or-unable-to-authenticate-data-with-aes-128-gcm-in-node
     //encrypts a private message and creates a content signature
@@ -159,34 +203,30 @@ class CryptoManager{
         //encrypt message with RSA
         const ciphertext = this.encryptRSA(plaintext, recipientPublicKey);
 
+        const ts = Date.now();
+        
         //create content signature 
-        const dataToSign = this.concatBuffersForSigning(
-            ciphertext,
-            from, 
-            to, 
-            Date.now()
-        );
-
-        const contentSig = this.createSignature(dataToSign, senderPrivateKey);
+        const contentSig = this.createPrivateMsgContentSig(ciphertext, from, to, ts, senderPrivateKey);
         
         return{
             ciphertext,
-            content_sig: contentSig
+            content_sig: contentSig,
+            ts: ts
         };
     }
 
     //decrypts a private message and verifies the content signature
     async decryptPrivateMessage(encryptedData, recipientPrivateKey, senderPublicKey){
         
-        const{ ciphertext, content_sig } = encryptedData;
+        const{ ciphertext, content_sig , from, to, ts} = encryptedData;
 
         try{
             //verify content signature
-            const signatureValid = this.verifyContentSigDM(
+            const signatureValid = this.verifyPrivateMsgContentSig(
                 ciphertext,
-                encryptedData.from,
-                encryptedData.to,
-                encryptedData.ts,
+                from, 
+                to,
+                ts,
                 content_sig,
                 senderPublicKey
             );
@@ -197,7 +237,6 @@ class CryptoManager{
 
             //decrypt message with RSA 
             const plaintext = this.decryptRSA(ciphertext, recipientPrivateKey);
-
             return plaintext;
         } catch(error){
             throw new Error(`Decryption failed: ${error.message}`);

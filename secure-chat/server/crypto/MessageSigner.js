@@ -6,8 +6,7 @@ class MessageSigner{
 
     //signs a message envelope by creating a signature of the canonicalised payload
     signEnvelope(envelope, privateKey){
-        const payloadString = this.canonicaliseJSON(envelope.payload);
-        const signature = this.cryptoManager.createSignature(payloadString, privateKey);
+        const signature = this.cryptoManager.signEnvelopePayload(envelope.payload, privateKey);
 
         return{
             ...envelope,
@@ -17,20 +16,18 @@ class MessageSigner{
 
     //verifies the signature of a message envelope 
     verifyEnvelope(envelope, publicKey){
-        const payloadString = this.canonicaliseJSON(envelope.payload);
-        return this.cryptoManager.verifySignature(payloadString, envelope.sig, publicKey);
+        return this.cryptoManager.verifyEnvelopePayload(envelope.payload, envelope.sig, publicKey);
     }
     
     //reference: https://gist.github.com/maentx/50ec00ae7c623ea66c93a5bdac947665
     //canonicalise a Json obj by sorting keys to ensure consistent serialisation
     //it is used to prevents signature verification failures due to different key ordering
     canonicaliseJSON(obj){
-        return JSON.stringify(obj, Object.keys(obj).sort());
+        return this.cryptoManager.canonicaliseJSON(obj);
     }
 
     //create a content signature for different message types
     createContentSignature(type, data, privateKey){
-        let dataToSign;
 
         switch(type){
             case 'MSG_PRIVATE':
