@@ -99,7 +99,6 @@ FILES INCLUDED
 ===============================================================================
 
 - crypto/CryptoManager.js - Handles encryption, decryption, and key management
-- crypto/MessageSigner.js - Signs and verifies message envelopes
 - test-crypto.js - Test file for verifying the functionality of CryptoManager.js and MessageSigner.js
 
 ===============================================================================
