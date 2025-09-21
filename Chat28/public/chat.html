@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat28</title>
+  <link rel="stylesheet" href="stylesheets/chat-style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+</head>
+
+<body data-theme="light">
+  <div class="drop-zone" id="dropZone">
+    <i class="fa-solid fa-folder-open"></i>Drop files here to upload
+  </div>
+
+  <div class="navbar-top">
+    <div class="page-title">Chat28</div>
+    <div class="top-controls">
+      <button class="profile-btn" onclick="showProfile()"><i class="fa-solid fa-user"></i> Profile</button>
+      <button class="mode-toggle" onclick="toggleMode()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
+      <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="navbar">
+      <div class="logo"><i class="fa-solid fa-comment"></i> Chat28</div>
+      <div class="user-count">
+        <i class="fa-solid fa-users"></i> <span id="memberCount">0</span> Members Online
+      </div>
+
+      <div class="section-title">Online Members</div>
+      <div class="tab-content" id="onlineUsers"><!-- populated by WS --></div>
+
+      <div class="section-title" style="margin-top: 20px;">Offline Members</div>
+      <div class="tab-content" id="offlineUsers"><!-- populated by WS --></div>
+
+      <div class="connection-status" id="connectionStatus">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...
+      </div>
+    </div>
+
+    <div class="main-chat">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title">Public Channel</div>
+          <div class="chat-subtitle" id="chatSubtitle">0 total members • 0 online</div>
+        </div>
+        <div class="chat-actions">
+          <button class="action-btn" onclick="showChannelInfo()"><i class="fa-solid fa-circle-info"></i> Info</button>
+          <button class="action-btn" onclick="reconnectWebSocket()"><i class="fa-solid fa-refresh"></i>
+            Reconnect</button>
+        </div>
+      </div>
+
+      <div class="message-container" id="messageContainer">
+        <div class="system-message">Welcome to Chat28! Connect with others in real-time.</div>
+        <div class="system-message">Commands: /list, /all &lt;message&gt;, /tell &lt;user&gt; &lt;message&gt;, /file &lt;user&gt; &lt;path&gt;</div>
+      </div>
+
+      <div class="message-input-container">
+        <div class="message-type-selector">
+          <button class="type-btn active" onclick="setMessageType('public', this)">
+            <i class="fa-solid fa-globe"></i> Public
+          </button>
+          <button class="type-btn" onclick="setMessageType('private', this)">
+            <i class="fa-solid fa-lock"></i> Private
+          </button>
+        </div>
+
+        <div class="private-recipient-selector" id="recipientSelector">
+          <div class="recipient-label">Send private message to:</div>
+          <select class="recipient-select" id="recipientSelect">
+            <option value="">Select a user...</option>
+          </select>
+        </div>
+
+        <div class="input-wrapper">
+          <textarea class="message-input" id="messageInput" placeholder="Type your message or use /list, /all, /tell, /file commands..." rows="1"
+            onkeydown="handleKeyPress(event)" oninput="adjustHeight(this)"></textarea>
+          <div class="input-actions">
+            <input type="file" class="file-input" id="fileInput" multiple onchange="handleFileSelect(event)" />
+            <button class="input-btn" onclick="triggerFileInput()" title="Attach file">
+              <i class="fa-solid fa-paperclip"></i>
+            </button>
+            <button class="input-btn" onclick="addEmoji()" title="Add emoji">
+              <i class="fa-solid fa-smile"></i>
+            </button>
+            <button class="input-btn send-btn" onclick="sendMessage()" title="Send message">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load existing chat.js file -->
+  <script src="chat.js"></script>
+  
+  <!-- Additional functions to maintain UI compatibility -->
+  <script>
+    // Enhanced functions to work with chat.js
+
+    // Override the getCurrentUser function to work with authentication
+    const originalGetCurrentUser = getCurrentUser;
+    getCurrentUser = async function() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.authenticated) {
+          currentUsername = data.username;
+          return data;
+        } else {
+          localStorage.clear();
+          window.location.href = '/login.html';
+        }
+      } catch (e) {
+        console.error('[me] failed:', e);
+        localStorage.clear();
+        window.location.href = '/login.html';
+      }
+    };
+
+    // Enhanced user display with DM buttons (like original Vue version)
+    function renderOnlineUsers() {
+      const container = document.getElementById('onlineUsers');
+      const recipientSelect = document.getElementById('recipientSelect');
+      
+      container.innerHTML = '';
+      recipientSelect.innerHTML = '<option value="">Select a user...</option>';
+      
+      onlineUsers.forEach(userId => {
+        if (userId !== currentUsername) {
+          // Online users list with avatar and DM button like Vue version
+          const userDiv = document.createElement('div');
+          userDiv.className = 'user-item online';
+          userDiv.innerHTML = `
+            <div class="user-avatar"></div>
+            <span class="user-name">${escapeHtml(userId)}</span>
+            <button class="dm-btn" onclick="startPrivateChat('${userId}')">DM</button>
+          `;
+          container.appendChild(userDiv);
+
+          // Add to recipient select
+          const option = document.createElement('option');
+          option.value = userId;
+          option.textContent = userId;
+          recipientSelect.appendChild(option);
+        }
+      });
+
+      // Update member count
+      document.getElementById('memberCount').textContent = onlineUsers.size;
+      document.getElementById('chatSubtitle').textContent = `${onlineUsers.size} total members • ${onlineUsers.size} online`;
+    }
+
+    // Start private chat function (from Vue version)
+    function startPrivateChat(userName) {
+      const privateBtn = document.querySelector('.type-btn:nth-child(2)');
+      setMessageType('private', privateBtn);
+      document.getElementById('recipientSelect').value = userName;
+      document.getElementById('messageInput').focus();
+    }
+
+    // Enhanced message display functions
+    function displayPublicMessage(sender, text) {
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = sender === currentUsername ? 'my message' : 'other message';
+
+      messageEl.innerHTML = `
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">${escapeHtml(sender)}</span>
+            <span>Public</span>
+          </div>
+          <div class="text">${escapeHtml(text)}</div>
+          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      `;
+
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function displayPrivateMessage(sender, text, direction) {
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = (sender === currentUsername ? 'my message' : 'other message') + ' private-message';
+
+      // Determine the label based on direction
+      let label;
+      if (sender === currentUsername) {
+        label = direction || 'Private';
+      } else {
+        label = `From ${sender}`;
+      }
+
+      messageEl.innerHTML = `
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">${escapeHtml(sender)}</span>
+            <span>${label}</span>
+          </div>
+          <div class="text">${escapeHtml(text)}</div>
+          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      `;
+
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function displaySystemMessage(text) {
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = 'system-message';
+      messageEl.textContent = text;
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // File display function (from Vue version)
+    function displayFileMessage(file) {
+      const container = document.getElementById('messageContainer');
+      const messageEl = document.createElement('div');
+      messageEl.className = 'my message';
+      const tag = currentMessageType === 'private' ? 'Private' : 'Public';
+      
+      messageEl.innerHTML = `
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">You</span><span>${tag}</span>
+          </div>
+          <div class="text">Shared a file: ${file.name}</div>
+          <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      `;
+      
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Override logout to clean up more thoroughly
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        // Close WebSocket connection
+        if (ws) {
+          ws.close();
+        }
+
+        // Clear all stored data
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('pubkey');
+
+        // Call logout API and redirect
+        fetch('/api/logout', { method: 'POST' })
+          .then(() => window.location.href = '/login.html')
+          .catch(() => window.location.href = '/login.html');
+      }
+    }
+
+    // Enhanced connection status matching Vue version
+    function updateConnectionStatus(status) {
+      const statusEl = document.getElementById('connectionStatus');
+
+      switch (status) {
+        case 'connecting':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...';
+          statusEl.className = 'connection-status connecting';
+          break;
+        case 'connected':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #4CAF50;"></i> Connected';
+          statusEl.className = 'connection-status connected';
+          break;
+        case 'disconnected':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #ff9800;"></i> Reconnecting...';
+          statusEl.className = 'connection-status reconnecting';
+          break;
+        case 'error':
+        case 'failed':
+          statusEl.innerHTML = '<i class="fa-solid fa-circle" style="color: #f44336;"></i> Connection failed';
+          statusEl.className = 'connection-status error';
+          break;
+      }
+    }
+  </script>
+</body>
+
+</html>

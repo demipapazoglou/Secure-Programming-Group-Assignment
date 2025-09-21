@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat28</title>
+  <link rel="stylesheet" href="stylesheets/login.css">
+</head>
+<body>
+  <div id="login-app">
+    <!-- LOGIN -->
+    <div class="login-box" id="loginForm">
+      <div class="login-title">Log In to Chat28</div>
+      <form onsubmit="handleLogin(event)">
+        <div class="login-inner">
+          <div class="login-text">Username / Email</div>
+          <div class="input-box">
+            <input type="text" id="loginIdentifier" placeholder="Enter your username or email" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Password</div>
+          <div class="input-box">
+            <input type="password" id="loginPassword" placeholder="Enter your password" required>
+          </div>
+        </div>
+        <button type="submit" class="login-button">Login</button>
+      </form>
+
+      <a href="#" class="forgot-password">Forgot Password?</a>
+
+      <div class="flex-row">
+        <div class="divider"></div>
+        <div class="or-text">OR</div>
+        <div class="divider"></div>
+      </div>
+
+      <div class="not-member">
+        <div>Don't have an account?</div>
+        <div onclick="toggleSignUp()" class="sign-up-today">Create an account</div>
+      </div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div class="login-box" id="signupForm" style="display: none;">
+      <div class="login-title">Sign Up for Chat28</div>
+      <form onsubmit="handleSignup(event)">
+        <div class="login-inner">
+          <div class="login-text">Username</div>
+          <div class="input-box">
+            <input type="text" id="signupUsername" placeholder="Choose a username" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Email</div>
+          <div class="input-box">
+            <input type="email" id="signupEmail" placeholder="Enter your email" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Password</div>
+          <div class="input-box">
+            <input type="password" id="signupPassword" placeholder="Create a password" required>
+          </div>
+        </div>
+        <div class="login-inner">
+          <div class="login-text">Confirm Password</div>
+          <div class="input-box">
+            <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+          </div>
+        </div>
+        <button type="submit" class="login-button">Sign Up</button>
+      </form>
+
+      <div class="not-member">
+        <div>Already have an account?</div>
+        <div onclick="toggleSignUp()" class="sign-up-today">Log in</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State management (replacing Vue data)
+    let isSignUp = false;
+
+    function toggleSignUp() {
+      isSignUp = !isSignUp;
+      console.log('[toggle] sign_up ->', isSignUp);
+      
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      
+      if (isSignUp) {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+      } else {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+      }
+    }
+
+    async function handleSignup(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('signupUsername').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      console.log('[signup] preflight data:', { username, email, password: '***' });
+
+      if (!username || !email || !password) {
+        alert('Please fill out all fields.');
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+        console.log('[signup] server response:', data);
+
+        if (response.ok) {
+          alert(data?.message || 'Signup successful!');
+          // Store the token and user info if provided
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user_id', data.user.user_id);
+            localStorage.setItem('username', data.user.username);
+            localStorage.setItem('pubkey', data.user.pubkey);
+          }
+          window.location.href = '/chat.html';
+        } else {
+          alert(data?.error || 'Signup failed.');
+        }
+      } catch (err) {
+        console.error('[signup] error:', err.message);
+        alert('Signup failed.');
+      }
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      
+      const identifier = document.getElementById('loginIdentifier').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      console.log('[login] preflight data:', { identifier, password: '***' });
+
+      if (!identifier || !password) {
+        alert('Please enter your username/email and password.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password })
+        });
+
+        const data = await response.json();
+        console.log('[login] server response:', data);
+
+        if (response.ok) {
+          alert(data?.message || 'Login successful!');
+          // Store authentication data
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user_id', data.user.user_id);
+          localStorage.setItem('username', data.user.username);
+          localStorage.setItem('pubkey', data.user.pubkey);
+          window.location.href = '/chat.html';
+        } else {
+          alert(data?.error || 'Login failed.');
+        }
+      } catch (err) {
+        console.error('[login] error:', err.message);
+        alert('Login failed.');
+      }
+    }
+
+    // Initialise page
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('[init] Login page loaded');
+    });
+  </script>
+</body>
+</html>

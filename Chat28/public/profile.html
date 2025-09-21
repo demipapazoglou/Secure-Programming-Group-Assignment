@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - Chat28</title>
+    <link rel="stylesheet" href="stylesheets/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+</head>
+
+<body data-theme="light">
+    <div class="navbar-top">
+        <div class="page-title">Profile Settings</div>
+        <div class="top-controls">
+            <a href="chat.html" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Chat
+            </a>
+            <button class="mode-toggle" onclick="toggleMode()">
+                <i class="fa-solid fa-moon"></i> Dark Mode
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <div class="avatar-image" onclick="triggerAvatarUpload()">
+                    <i class="fa-solid fa-user"></i>
+                    <div class="avatar-overlay">
+                        <i class="fa-solid fa-camera" style="color: white; font-size: 24px;"></i>
+                    </div>
+                </div>
+                <input type="file" class="avatar-upload" id="avatarUpload" accept="image/*"
+                    onchange="handleAvatarUpload(event)">
+            </div>
+            <h1 class="profile-name" id="profileName">Loading...</h1>
+            <p class="profile-email" id="profileEmail">Loading...</p>
+            <div class="status-indicator status-online" id="statusIndicator">
+                <i class="fa-solid fa-circle"></i>
+                Online
+            </div>
+        </div>
+
+        <div class="settings-grid">
+            <!-- Personal Information -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-user"></i>
+                    Personal Information
+                </h2>
+                <form onsubmit="savePersonalInfo(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-input" id="firstName" value="" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-input" id="lastName" value="" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" class="form-input" id="displayName" value="" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="email" value="" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-input form-textarea" id="bio"
+                            placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save"></i>
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Account Settings -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-cog"></i>
+                    Account Settings
+                </h2>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" onchange="updateStatus(this.value)">
+                        <option value="online" selected>Online</option>
+                        <option value="away">Away</option>
+                        <option value="busy">Do Not Disturb</option>
+                        <option value="invisible">Invisible</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Privacy Settings -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Privacy & Security
+                </h2>
+                <div class="switch-container">
+                    <label class="form-label">Allow private messages from anyone</label>
+                    <label class="switch">
+                        <input type="checkbox" id="pmPermission" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Show online status to others</label>
+                    <label class="switch">
+                        <input type="checkbox" id="showStatus" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Enable read receipts</label>
+                    <label class="switch">
+                        <input type="checkbox" id="readReceipts">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Allow file transfers</label>
+                    <label class="switch">
+                        <input type="checkbox" id="fileTransfers" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-bell"></i>
+                    Notifications
+                </h2>
+                <div class="switch-container">
+                    <label class="form-label">Desktop notifications</label>
+                    <label class="switch">
+                        <input type="checkbox" id="desktopNotif" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="switch-container">
+                    <label class="form-label">Notification preview</label>
+                    <label class="switch">
+                        <input type="checkbox" id="notifPreview">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-lock"></i>
+                    Security
+                </h2>
+                <div class="security-warning">
+                    <div class="security-warning-text">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        Two-factor authentication is recommended for enhanced account security.
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary" onclick="changePassword()">
+                        <i class="fa-solid fa-key"></i>
+                        Change Password
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="setup2FA()">
+                        <i class="fa-solid fa-shield-check"></i>
+                        Setup Two-Factor Authentication
+                    </button>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-secondary" onclick="viewSessions()">
+                        <i class="fa-solid fa-devices"></i>
+                        Manage Active Sessions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="settings-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Danger Zone
+                </h2>
+                <div class="form-group">
+                    <label class="form-label">Export Account Data</label>
+                    <button type="button" class="btn btn-secondary" onclick="exportData()">
+                        <i class="fa-solid fa-download"></i>
+                        Export Data
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Delete Account</label>
+                    <button type="button" class="btn btn-danger" onclick="deleteAccount()">
+                        <i class="fa-solid fa-trash"></i>
+                        Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection for profile updates
+        let socket = null;
+
+        // Initialize profile page
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            const modeBtn = document.querySelector('.mode-toggle');
+            if (savedTheme === 'dark') {
+                modeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+            }
+
+            // Load user profile data
+            await loadUserProfile();
+
+            // Connect WebSocket for real-time updates
+            connectWebSocket();
+        });
+
+        async function loadUserProfile() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                if (data.authenticated) {
+                    // Update profile display
+                    document.getElementById('profileName').textContent = data.username || 'User';
+                    document.getElementById('profileEmail').textContent = data.email || 'No email';
+                    
+                    // Pre-fill form fields
+                    document.getElementById('displayName').value = data.username || '';
+                    document.getElementById('email').value = data.email || '';
+                    
+                    // Split display name into first/last if possible
+                    const nameParts = (data.username || '').split(' ');
+                    document.getElementById('firstName').value = nameParts[0] || '';
+                    document.getElementById('lastName').value = nameParts.slice(1).join(' ') || '';
+                    
+                    // Load bio from meta if available
+                    if (data.meta && data.meta.bio) {
+                        document.getElementById('bio').value = data.meta.bio;
+                    }
+                } else {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Failed to load profile:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        function connectWebSocket() {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                
+                socket = new WebSocket(wsUrl);
+                socket.onopen = () => console.log("Connected to server for profile updates");
+                socket.onmessage = (event) => console.log("Message from server:", event.data);
+                socket.onclose = () => console.log("Profile WebSocket disconnected");
+                socket.onerror = (error) => console.log("Profile WebSocket error:", error);
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+            }
+        }
+
+        // Dark/Light Mode
+        function toggleMode() {
+            const body = document.body;
+            const modeBtn = document.querySelector('.mode-toggle');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                modeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                modeBtn.innerHTML = '<i class="fa-solid fa-moon"></i> Dark Mode';
+            }
+            localStorage.setItem('theme', body.getAttribute('data-theme'));
+        }
+
+        // Avatar Upload
+        function triggerAvatarUpload() {
+            document.getElementById('avatarUpload').click();
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const avatarImage = document.querySelector('.avatar-image');
+                    avatarImage.innerHTML = `
+                        <img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <div class="avatar-overlay">
+                            <i class="fa-solid fa-camera" style="color: white; font-size: 24px;"></i>
+                        </div>
+                    `;
+                    // Send avatar change over websocket
+                    sendProfileUpdate({ avatar: e.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Save Personal Info
+        async function savePersonalInfo(event) {
+            event.preventDefault();
+            
+            const profileData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                displayName: document.getElementById('displayName').value,
+                email: document.getElementById('email').value,
+                bio: document.getElementById('bio').value
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        display_name: profileData.displayName,
+                        status: 'online',
+                        bio: profileData.bio
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    // Update display name in header
+                    document.getElementById('profileName').textContent = profileData.displayName;
+                } else {
+                    alert('Failed to update profile.');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Error updating profile.');
+            }
+
+            // Also send via WebSocket for real-time updates
+            sendProfileUpdate(profileData);
+        }
+
+        // Update Status
+        function updateStatus(status) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.className = 'status-indicator';
+            
+            switch (status) {
+                case 'online':
+                    statusIndicator.classList.add('status-online');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Online';
+                    break;
+                case 'away':
+                    statusIndicator.classList.add('status-away');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Away';
+                    break;
+                case 'busy':
+                    statusIndicator.classList.add('status-busy');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-minus-circle"></i> Do Not Disturb';
+                    break;
+                case 'invisible':
+                    statusIndicator.classList.add('status-offline');
+                    statusIndicator.innerHTML = '<i class="fa-solid fa-circle"></i> Invisible';
+                    break;
+            }
+            sendProfileUpdate({ status });
+        }
+
+        function sendProfileUpdate(data) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: "profileUpdate", data }));
+            }
+        }
+
+        // Placeholder actions (same as Vue version)
+        function changePassword() { 
+            alert('Password change dialog would open here.'); 
+        }
+        
+        function setup2FA() { 
+            alert('2FA setup dialog would open here.'); 
+        }
+        
+        function viewSessions() { 
+            alert('Active sessions management would open here.'); 
+        }
+        
+        function exportData() { 
+            alert('Data export process would start here.'); 
+        }
+        
+        function deleteAccount() { 
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                alert('Account deletion process would start here.');
+            }
+        }
+    </script>
+</body>
+
+</html>
