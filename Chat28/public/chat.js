@@ -6,6 +6,7 @@ let currentUsername = null;
 let onlineUsers = new Set();
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
+let cryptoManager = null; 
 
 // -------------------- Boot --------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chatContainer.addEventListener('dragover', handleDragOver);
   chatContainer.addEventListener('drop', handleDrop);
   document.getElementById('messageInput').focus();
+  cryptoManager = new CryptoManager();
 
   // Check authentication
   const token = localStorage.getItem('token');
@@ -79,7 +81,7 @@ function sendWebSocketMessage(type, from, to, payload) {
 }
 
 // -------------------- WS Message Handling --------------------
-function handleWebSocketMessage(message) {
+async function handleWebSocketMessage(message) {
   const { type, from, payload } = message;
 
   switch (type) {
@@ -104,11 +106,22 @@ function handleWebSocketMessage(message) {
     }
 
     case 'USER_DELIVER': {
-      // SOCP message delivery
       const { ciphertext, sender, sender_pub, content_sig } = payload || {};
+      
       if (ciphertext) {
-        // For now, display as encrypted (should decrypt with private key)
-        displayPrivateMessage(sender, `[Encrypted: ${ciphertext.substring(0, 20)}...]`);
+        try {
+          //get current user's private key (need to store this during login)
+          const userPrivateKey = localStorage.getItem('privkey_store');
+          
+          const decrypted = await cryptoManager.decryptPublicMessage(
+            { ciphertext, content_sig, from: sender, ts: message.ts },
+            userPrivateKey, 
+            sender_pub
+          );
+          displayPublicMessage(sender, decrypted);
+        } catch (error) {
+          displaySystemMessage(`Failed to decrypt message from ${sender}`);
+        }
       }
       break;
     }
@@ -311,14 +324,32 @@ async function handleListCommand() {
   }
 }
 
-function handleTellCommand(recipient, message) {
-  // Use existing private message system but with command format
-  sendWebSocketMessage('MSG_DIRECT', currentUsername, recipient, { 
-    text: message,
-    ciphertext: message, // TODO: proper RSA encryption
-    sender_pub: localStorage.getItem('pubkey') || 'TODO_PUBKEY',
-    content_sig: 'TODO_CONTENT_SIG'
-  });
+// function handleTellCommand(recipient, message) {
+//   // Use existing private message system but with command format
+//   sendWebSocketMessage('MSG_DIRECT', currentUsername, recipient, { 
+//     text: message,
+//     ciphertext: message, // TODO: proper RSA encryption
+//     sender_pub: localStorage.getItem('pubkey') || 'TODO_PUBKEY',
+//     content_sig: 'TODO_CONTENT_SIG'
+//   });
+//   displayPrivateMessage(`To ${recipient}`, message);
+// }
+
+async function handleTellCommand(recipient, message) {
+  //get recipient's public key from server
+  const recipientPubKey = await getPublicKey(recipient);
+  const userPrivateKey = localStorage.getItem('privkey'); // Need to store this
+  
+  //encrypt using cryptoManager
+  const encrypted = await cryptoManager.encryptPrivateMessage(
+    message, 
+    recipientPubKey, 
+    userPrivateKey, 
+    currentUsername, 
+    recipient
+  );
+  
+  sendWebSocketMessage('MSG_DIRECT', currentUsername, recipient, encrypted);
   displayPrivateMessage(`To ${recipient}`, message);
 }
 
@@ -340,9 +371,21 @@ function handleFileCommand(recipient, filepath) {
   displaySystemMessage('File transfer not yet implemented');
 }
 
-function sendPublicMessage(text) {
+async function sendPublicMessage(text) {
+  //get all public channel members' public keys
+  const publicKeys = await getAllPublicChannelMemberKeys(); 
+  
+  // Encrypt the message (you'll need to implement multi-recipient encryption)
+  const encrypted = await cryptoManager.encryptPublicMessage(
+    text, 
+    publicKeys, 
+    currentUserPrivateKey, 
+    currentUsername
+  );
+
   // For SOCP compliance, this should be MSG_PUBLIC_CHANNEL with encryption
-  sendWebSocketMessage('MSG_PUBLIC', currentUsername, '*', { text });
+  // sendWebSocketMessage('MSG_PUBLIC', currentUsername, '*', { text });
+  sendWebSocketMessage('MSG_PUBLIC_CHANNEL', currentUsername, 'public', encrypted); 
   displayPublicMessage(currentUsername, text); // Show locally
 }
 

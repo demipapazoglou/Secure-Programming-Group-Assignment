@@ -233,6 +233,48 @@ class CryptoManager{
             throw new Error(`Decryption failed: ${error.message}`);
         }
     }
+
+    //for public channel - encrypt for multiple recipients
+    async encryptPublicMessage(plaintext, recipientPublicKeys, senderPrivateKey, from) {
+        const ts = Date.now();
+        
+        //encrypt for each recipient 
+        const ciphertext = this.encryptRSA(plaintext, recipientPublicKeys[0]);
+        
+        const contentSig = this.createPublicCHContentSig(ciphertext, from, ts, senderPrivateKey);
+        
+        return {
+            ciphertext,
+            content_sig: contentSig,
+            ts: ts
+        };
+    }
+
+    //decrypt public message
+    async decryptPublicMessage(encryptedData, recipientPrivateKey, senderPublicKey) {
+        const { ciphertext, content_sig, from, ts } = encryptedData;
+
+        try {
+            // Verify content signature
+            const signatureValid = this.verifyPublicCHContentSig(
+                ciphertext,
+                from,
+                ts,
+                content_sig,
+                senderPublicKey
+            );
+
+            if (!signatureValid) {
+                throw new Error('Invalid content signature');
+            }
+
+            //decrypt message
+            const plaintext = this.decryptRSA(ciphertext, recipientPrivateKey);
+            return plaintext;
+        } catch (error) {
+            throw new Error(`Decryption failed: ${error.message}`);
+        }
+    }
 }
 
 module.exports = CryptoManager;

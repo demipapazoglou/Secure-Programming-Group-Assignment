@@ -30,6 +30,43 @@ function startSOCPWebSocketServer(httpServer, locals) {
         return sendError(ws, "MALFORMED_ENVELOPE");
       }
 
+      //add sig verification 
+      if (envelope.type !== "USER_HELLO" && envelope.type !== "SERVER_HELLO_JOIN") {
+        if (!envelope.sig) {
+          return sendError(ws, "MISSING_SIGNATURE");
+        }
+    
+        try {
+          // Get sender's public key based on who sent it
+          let senderPublicKey;
+          if (envelope.from.startsWith('server_')) {
+            // For servers, get from server_addrs or bootstrap config
+            senderPublicKey = "TODO_SERVER_PUBKEY"; // You'll need to implement server key storage
+          } else {
+            // For users, get from database
+            const user = await locals.db.getUserByIdentifier(envelope.from);
+            senderPublicKey = user?.pubkey;
+          }
+          
+          if (!senderPublicKey) {
+            return sendError(ws, "UNKNOWN_SENDER");
+          }
+      
+          const isValid = await locals.cryptoManager.verifyEnvelope(
+            envelope.payload, 
+            envelope.sig, 
+            senderPublicKey
+          );
+          
+          if (!isValid) {
+            return sendError(ws, "INVALID_SIGNATURE");
+          }
+        } catch (error) {
+          console.error("Signature verification error:", error);
+          return sendError(ws, "SIG_VERIFICATION_ERROR");
+        }
+      }
+
       console.log(`[SOCP] Received: ${envelope.type} from ${envelope.from}`);
 
       switch (envelope.type) {
@@ -135,6 +172,46 @@ function startSOCPWebSocketServer(httpServer, locals) {
     if (!state.local_users.has(from)) {
       console.warn(`[SOCP] Message from non-local user: ${from}`);
       return;
+    }
+
+    //add content sig verification for encrypted messages 
+    if ((type === "MSG_DIRECT" || type === "MSG_PUBLIC_CHANNEL") && payload.ciphertext) {
+      try {
+        const sender = await locals.db.getUserByIdentifier(from);
+        if (!sender?.pubkey) {
+          console.warn(`No public key for sender: ${from}`);
+          return;
+        }
+
+        // Verify content signature based on message type
+        let contentValid;
+        if (type === "MSG_DIRECT") {
+          contentValid = await locals.cryptoManager.verifyPrivateMsgContentSig(
+            payload.ciphertext,
+            from,
+            to,
+            envelope.ts,
+            payload.content_sig,
+            sender.pubkey
+          );
+        } else if (type === "MSG_PUBLIC_CHANNEL") {
+          contentValid = await locals.cryptoManager.verifyPublicCHContentSig(
+            payload.ciphertext,
+            from,
+            envelope.ts,
+            payload.content_sig,
+            sender.pubkey
+          );
+        }
+
+        if (!contentValid) {
+          console.warn(`Invalid content signature from: ${from}`);
+          return sendError(state.local_users.get(from), "INVALID_CONTENT_SIG");
+        }
+      } catch (error) {
+        console.error("Content signature verification failed:", error);
+        return;
+      }
     }
 
     if (type === "MSG_PUBLIC" || type === "MSG_PUBLIC_CHANNEL") {
