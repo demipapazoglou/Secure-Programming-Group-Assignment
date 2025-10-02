@@ -6,6 +6,7 @@ const logger       = require("morgan");
 
 const indexRouter  = require("./routes/index");
 const usersRouter  = require("./routes/users"); 
+const authRouter  = require("./routes/auth");
 
 const app = express();
 
@@ -22,6 +23,8 @@ app.use(express.static(path.join(__dirname, "public"))); // serves login.html, c
 
 // ---------- ROUTES (DB-free only here) ----------
 app.use("/", indexRouter);
+app.use("/api/users", usersRouter);
+app.use("/api", authRouter);
 
 // ---------- ERRORS ----------
 app.use(function (req, res, next) {
