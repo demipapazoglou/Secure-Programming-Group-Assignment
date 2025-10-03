@@ -1,6 +1,12 @@
-Group Repository for COMP SCI 3307 Secure Programming Secure Chat Application Project (2025 Semester 2)
+Group Repository for COMP SCI 3307 - Secure Programming: Secure Chat Application Project (2025 Semester 2)
 
-Group 28 UG: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+Contributors
+Group 28 UG: 
+- Samira Hazara
+- Demi Papazoglou
+- Caitlin Joyce Martyr
+- Amber Yaa Wen Chew
+- Grace Baek 
 
 ===============================================================================
 TABLE OF CONTENTS
@@ -26,9 +32,9 @@ FEATURES
 
 - One-to-one private messaging
 - Group chat support
-- End-to-end encryption
+- End-to-end encryption (RSA-based)
 - Authentication and authorisation
-- Real-time communication
+- Real-time communication using WebSockets
 
 ===============================================================================
 TECHNOLOGIES USED
@@ -42,7 +48,8 @@ Backend:
 - Database: MongoDB
 
 Frontend:
-- Markup: HTML
+- HTML
+- CSS stylesheets
 
 Security & Authentication:
 - Password Hashing: bcryptjs
@@ -55,7 +62,7 @@ INSTALLATION AND SETUP
 ===============================================================================
 
 Recommended Browser: Google Chrome  
-Preferred Device: Laptop/Desktop for full screen functionality
+Preferred Device: Laptop/Desktop for full UI functionality
 
 1. Clone the Repository 
    git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
@@ -88,8 +95,21 @@ Preferred Device: Laptop/Desktop for full screen functionality
    Visit http://localhost:3000
 
 ===============================================================================
-PROGRAM USAGE
+PROGRAM USAGE EXAMPLES
 ===============================================================================
+
+User Registration and Login:
+1. Navigate to http://localhost:3000 in a browser
+2. Create a new account
+3. Login using your credentials
+
+Sending a private message:
+1. Select a user from the contacts list
+2. Enter a message; it will be encrypted with the recipient's public key
+
+Sending a group message:
+1. Select "Public chat" and send your message
+- All connected users will receive the broadcast
 
 Run the crypto test:
 node test-crypto.js
@@ -100,15 +120,17 @@ FILES INCLUDED
 
 - crypto/CryptoManager.js - Handles encryption, decryption, and key management
 - test-crypto.js - Test file for verifying the functionality of CryptoManager.js and MessageSigner.js
+- frontend/public/ - Frontend files (eg. HTML, CSS)
+- /server.js - Main backend server entry points
 
 ===============================================================================
 CONTRIBUTIONS
 ===============================================================================
 
-Pull requests, suggestions, and bug reports are welcome. For significant contributions, please open an issue first to discuss the changes.
+Pull requests, suggestions, and bug reports are welcome. For significant contributions, please open an issue first to discuss your ideas.
 
 ===============================================================================
 ACKNOWLEDGEMENTS
 ===============================================================================
 
-This project was developed solely for academic purposes and is not intended for production or commercial deployment.
+This project was developed solely for academic purposes as part of COMP SCI 3307 and is not intended for production or commercial deployment.
