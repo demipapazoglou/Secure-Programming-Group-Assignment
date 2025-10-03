@@ -23,7 +23,8 @@ TABLE OF CONTENTS
 PROJECT DESCRIPTION
 ===============================================================================
 
-Chat28 is a secure, real-time public chat platform that supports both one-to-one and group (public announcement style) messaging. Designed with a primary focus on security and privacy, Chat28 provides an application where users can communicate with confidence.
+Chat28 is a secure, real-time public chat platform that supports both one-to-one and group (public announcement style) messaging. 
+Designed with a primary focus on security and privacy, Chat28 provides an application where users can communicate with confidence.
 
 ===============================================================================
 FEATURES
