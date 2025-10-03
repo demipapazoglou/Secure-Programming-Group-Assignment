@@ -1,12 +1,11 @@
 Group Repository for COMP SCI 3307 - Secure Programming: Secure Chat Application Project (2025 Semester 2)
 
-Contributors
-Group 28 UG: 
-- Samira Hazara
-- Demi Papazoglou
-- Caitlin Joyce Martyr
+The contributors for this project are members of Group 28 UG:
 - Amber Yaa Wen Chew
-- Grace Baek 
+- Caitlin Joyce Martyr
+- Demi Papazoglou
+- Grace Baek
+- Samira Hazara
 
 ===============================================================================
 TABLE OF CONTENTS
@@ -91,8 +90,7 @@ Preferred Device: Laptop/Desktop for full UI functionality
 
 5. Start the Server 
    npm start
-
-   Visit http://localhost:3000
+   (Visit http://localhost:3000)
 
 ===============================================================================
 PROGRAM USAGE EXAMPLES
@@ -111,8 +109,7 @@ Sending a group message:
 1. Select "Public chat" and send your message
 - All connected users will receive the broadcast
 
-Run the crypto test:
-node test-crypto.js
+Run the crypto test: node test-crypto.js
 
 ===============================================================================
 FILES INCLUDED
