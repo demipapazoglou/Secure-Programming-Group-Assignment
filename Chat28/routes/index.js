@@ -1,8 +1,18 @@
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ */
+
 const express = require("express");
 const path = require("path");
 const router = express.Router();
 
-// Landing → redirect to login
+require("dotenv").config();
+
+// Landing --> redirect to login
 router.get("/", (req, res) => {
   res.redirect("/login.html");
 });

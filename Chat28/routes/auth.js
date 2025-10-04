@@ -1,141 +1,97 @@
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ */
+
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+const { User } = require("../database");
+const CryptoManager = require("../crypto/CryptoManager");
 
-// Helper: sign a JWT
-function generateToken(user) {
-  return jwt.sign(
-    {
-      user_id: user.user_id,
-      username: user.username,
-      email: user.email,
-    },
-    process.env.JWT_SECRET || "dev_secret",
-    { expiresIn: "2h" }
-  );
-}
+const cryptoManager = new CryptoManager();
 
-// ---------- REGISTER ----------
+// REGISTER
 router.post("/register", async (req, res) => {
   try {
-    const db = req.app.locals.db;
-    const cryptoManager = req.app.locals.cryptoManager;
-    const { username, email, password, pubkey, privkey_store } = req.body;
+    const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const existing = await User.findOne({ username });
+    if (existing) {
+      return res.status(400).json({ error: "Username already exists" });
     }
 
-    let finalPubkey = pubkey;
-    let finalPrivkeyStore = privkey_store;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // If no keys provided, generate them server-side (not ideal for security, but OK for assignment)
-    if (!pubkey || !privkey_store) {
-      try {
-        const keyPair = await cryptoManager.generateRSAKeyPair();
-        finalPubkey = keyPair.publicKey;
-        
-        // In real implementation, client would encrypt private key with password
-        // For assignment purposes, we'll do simple encryption server-side
-        const encryptedPrivateKey = Buffer.from(keyPair.privateKey).toString('base64');
-        finalPrivkeyStore = encryptedPrivateKey;
-      } catch (err) {
-        console.error("Key generation error:", err);
-        return res.status(500).json({ error: "Failed to generate keys" });
-      }
-    }
+    // generate RSA key pair
+    const { publicKey, privateKey } = await cryptoManager.generateRSAKeyPair();
 
-    const newUser = await db.createUser({
+    // fingerprint = hash of public key
+    const fingerprint = cryptoManager.base64urlEncode(
+      Buffer.from(publicKey).subarray(0, 32)
+    );
+
+    const newUser = new User({
       username,
-      email: email || `${username}@local.test`, // Default email for testing
-      password,
-      pubkey: finalPubkey,
-      privkey_store: finalPrivkeyStore,
+      password: hashedPassword,
+      publicKey,
+      fingerprint,
     });
 
-    if (!newUser) {
-      return res.status(409).json({ error: "Username or email already exists" });
-    }
+    await newUser.save();
 
-    res.status(201).json({ 
-      message: "User registered successfully", 
-      user: newUser,
-      // For assignment: return public key so client can store it
-      pubkey: finalPubkey
+    // sign JWT with user_id + username
+    const token = jwt.sign(
+      { user_id: newUser.user_id, username: newUser.username },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "2h" }
+    );
+
+    res.status(201).json({
+      user_id: newUser.user_id,
+      username: newUser.username,
+      token,
+      publicKey: newUser.publicKey,
+      fingerprint: newUser.fingerprint,
+      privateKey, // only send back once at registration
     });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Registration failed" });
   }
 });
 
-// ---------- LOGIN ----------
+// LOGIN
 router.post("/login", async (req, res) => {
   try {
-    const db = req.app.locals.db;
-    const { identifier, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ error: "Missing credentials" });
-    }
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ error: "Invalid credentials" });
 
-    const user = await db.validateUser(identifier, password);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(400).json({ error: "Invalid credentials" });
 
-    const token = generateToken(user);
-    
-    // For SOCP compliance, also return user's public key
-    res.json({ 
-      message: "Login successful", 
+    const token = jwt.sign(
+      { user_id: user.user_id, username: user.username },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "2h" }
+    );
+
+    res.json({
+      user_id: user.user_id,
+      username: user.username,
       token,
-      user: {
-        user_id: user.user_id,
-        username: user.username,
-        email: user.email,
-        pubkey: user.pubkey
-      }
+      publicKey: user.publicKey,
+      fingerprint: user.fingerprint,
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Login failed" });
   }
-});
-
-// ---------- GET USER INFO ----------
-router.get("/me", async (req, res) => {
-  const auth = req.headers["authorization"];
-  if (!auth) return res.status(401).json({ authenticated: false });
-
-  try {
-    const token = auth.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    const db = req.app.locals.db;
-    const user = await db.getUserByIdentifier(decoded.user_id);
-    
-    if (!user) {
-      return res.status(401).json({ authenticated: false });
-    }
-
-    res.json({ 
-      authenticated: true, 
-      user_id: user.user_id,
-      username: user.username,
-      email: user.email,
-      pubkey: user.pubkey
-    });
-  } catch (err) {
-    res.status(401).json({ authenticated: false });
-  }
-});
-
-// ---------- LOGOUT ----------
-router.post("/logout", (req, res) => {
-  res.json({ message: "Logout successful (client must clear token)" });
 });
 
 module.exports = router;

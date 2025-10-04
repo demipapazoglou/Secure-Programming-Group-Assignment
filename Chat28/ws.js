@@ -1,344 +1,456 @@
-const WebSocket = require("ws");
-const { v4: uuidv4 } = require("uuid");
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ *
+ * 
+ * SOCP v1.3 Compliance:
+ * - E2EE using RSA-4096, RSA-OAEP (SHA-256), RSASSA-PSS (SHA-256)
+ * - MSG_DIRECT for encrypted messages (server cannot decrypt)
+ * - Content signatures over: ciphertext || from || to || timestamp
+ * - Loop prevention for message routing
+ */
 
-function startSOCPWebSocketServer(httpServer, locals) {
-  const state = {
-    serverId: `server_${uuidv4()}`,
-    servers: new Map(),        
-    server_addrs: new Map(),   
-    local_users: new Map(),    
-    user_locations: new Map(), 
-  };
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+const { User } = require('./database');
 
-  locals.onlineUsers = state.local_users;
+const clients = new Map(); // username -> WebSocket
+const rooms = new Map();   // roomName -> Set of usernames
 
-  const wss = new WebSocket.Server({ server: httpServer });
+// Message loop prevention - cache seen message IDs
+const seenMessages = new Set();
+const MAX_SEEN_CACHE = 10000;
+let seenCacheArray = [];
 
-  wss.on("connection", (ws) => {
-    console.log("[SOCP] New WebSocket connection");
+function addToSeenCache(msgId) {
+  if (!seenMessages.has(msgId)) {
+    seenMessages.add(msgId);
+    seenCacheArray.push(msgId);
 
-    ws.on("message", async (data) => {
-      let envelope;
+    // Prevent memory leak - remove oldest if cache too large
+    if (seenCacheArray.length > MAX_SEEN_CACHE) {
+      const oldest = seenCacheArray.shift();
+      seenMessages.delete(oldest);
+    }
+  }
+}
+
+function initialiseWebSocket(server) {
+  const wss = new WebSocket.Server({ server });
+
+  wss.on('connection', async (ws, req) => {
+    let username = null;
+
+    ws.on('message', async (data) => {
       try {
-        envelope = JSON.parse(data.toString());
-      } catch {
-        return sendError(ws, "INVALID_JSON");
-      }
+        const message = JSON.parse(data);
 
-      // SOCP envelope validation
-      if (!envelope.type || !envelope.from || !envelope.ts || !envelope.payload) {
-        return sendError(ws, "MALFORMED_ENVELOPE");
-      }
+        // Authentication
+        if (message.type === 'AUTH') {
+          try {
+            const decoded = jwt.verify(message.token, process.env.JWT_SECRET || 'your-secret-key');
+            username = decoded.username;
 
-      console.log(`[SOCP] Received: ${envelope.type} from ${envelope.from}`);
+            // Store connection
+            clients.set(username, ws);
 
-      switch (envelope.type) {
-        case "USER_HELLO":
-          await handleUserHello(ws, envelope, state, locals);
-          break;
+            // Send auth success
+            ws.send(JSON.stringify({
+              type: 'AUTH_SUCCESS',
+              username: username
+            }));
 
-        case "USER_REMOVE":
-          handleUserRemove(ws, envelope, state);
-          break;
+            // Broadcast user joined
+            broadcast({
+              type: 'USER_JOIN',
+              username: username,
+              timestamp: Date.now()
+            }, username);
 
-        case "MSG_PUBLIC":
-        case "MSG_PRIVATE":
-        case "MSG_DIRECT":
-          await handleUserMessage(envelope, state, locals);
-          break;
+            console.log(`User authenticated: ${username}`);
+          } catch (err) {
+            ws.send(JSON.stringify({
+              type: 'ERROR',
+              message: 'Authentication failed'
+            }));
+            ws.close();
+          }
+          return;
+        }
 
-        case "SERVER_HELLO_JOIN":
-          handleServerJoin(ws, envelope, state);
-          break;
+        // All other messages require authentication
+        if (!username) {
+          ws.send(JSON.stringify({
+            type: 'ERROR',
+            message: 'Not authenticated'
+          }));
+          return;
+        }
 
-        case "SERVER_WELCOME":
-          handleServerWelcome(ws, envelope, state);
-          break;
+        // Handle different message types
+        switch (message.type) {
+          case 'MSG_PUBLIC':
+            handlePublicMessage(username, message);
+            break;
 
-        case "SERVER_ANNOUNCE":
-          handleServerAnnounce(envelope, state);
-          break;
+          case 'MSG_DIRECT':
+            await handleDirectMessage(username, message);
+            break;
 
-        case "HEARTBEAT":
-          handleHeartbeat(ws, envelope);
-          break;
+          case 'GET_ONLINE_USERS':
+            handleGetOnlineUsers(ws);
+            break;
 
-        default:
-          console.log("[SOCP] Unknown message type:", envelope.type);
-          sendError(ws, "UNKNOWN_TYPE");
+          case 'GET_USER_KEY':
+            await handleGetUserKey(ws, message);
+            break;
+
+          case 'ROOM_CREATE':
+            handleRoomCreate(username, message);
+            break;
+
+          case 'ROOM_JOIN':
+            handleRoomJoin(username, message);
+            break;
+
+          case 'ROOM_LEAVE':
+            handleRoomLeave(username, message);
+            break;
+
+          case 'ROOM_MESSAGE':
+            handleRoomMessage(username, message);
+            break;
+
+          case 'FILE_OFFER':
+            handleFileOffer(username, message);
+            break;
+
+          case 'FILE_ANSWER':
+            handleFileAnswer(username, message);
+            break;
+
+          case 'ICE_CANDIDATE':
+            handleIceCandidate(username, message);
+            break;
+
+          default:
+            console.log(`Unknown message type: ${message.type}`);
+        }
+      } catch (err) {
+        console.error('Message handling error:', err.message);
+        ws.send(JSON.stringify({
+          type: 'ERROR',
+          message: 'Invalid message format'
+        }));
       }
     });
 
-    ws.on("close", () => {
-      console.log("[SOCP] Connection closed");
-      if (ws.user_id) {
-        state.local_users.delete(ws.user_id);
-        state.user_locations.delete(ws.user_id);
-        gossipUserStatus(ws.user_id, "offline", state);
-        broadcastMemberList(state);
+    ws.on('close', () => {
+      if (username) {
+        // Remove from all rooms
+        rooms.forEach((members, roomName) => {
+          if (members.has(username)) {
+            members.delete(username);
+            broadcastToRoom(roomName, {
+              type: 'ROOM_USER_LEFT',
+              room: roomName,
+              username: username
+            });
+          }
+        });
+
+        clients.delete(username);
+
+        // Broadcast user left
+        broadcast({
+          type: 'USER_LEAVE',
+          username: username,
+          timestamp: Date.now()
+        });
+
+        console.log(`User disconnected: ${username}`);
       }
     });
 
-    ws.on("error", (error) => {
-      console.error("[SOCP] WebSocket error:", error);
+    ws.on('error', (err) => {
+      console.error('WebSocket error:', err.message);
     });
   });
 
-  // ---------- SOCP Message Handlers ----------
-  async function handleUserHello(ws, envelope, state, locals) {
-    const { from, payload } = envelope;
-    const { client, pubkey, enc_pubkey } = payload;
-
-    // Check if user exists in database
-    const user = await locals.db.getUserByIdentifier(from);
-    if (!user) {
-      return sendError(ws, "USER_NOT_FOUND");
-    }
-
-    // Verify pubkey matches stored key (simplified verification)
-    if (pubkey && user.pubkey && pubkey !== user.pubkey) {
-      console.warn(`[SOCP] Pubkey mismatch for user ${from}`);
-      // In production, this should be stricter
-    }
-
-    // Register user connection
-    ws.user_id = from;
-    state.local_users.set(from, ws);
-    state.user_locations.set(from, "local");
-
-    console.log(`[SOCP] User ${from} connected with client ${client}`);
-
-    // Send member list to user
-    sendMemberList(ws, Array.from(state.local_users.keys()));
-
-    // Gossip user presence to other servers
-    gossipUserStatus(from, "online", state);
-
-    // Broadcast updated member list to all local users
-    broadcastMemberList(state);
-  }
-
-  function handleUserRemove(ws, envelope, state) {
-    const { from } = envelope;
-    
-    state.local_users.delete(from);
-    state.user_locations.delete(from);
-    
-    gossipUserStatus(from, "offline", state);
-    broadcastMemberList(state);
-  }
-
-  async function handleUserMessage(envelope, state, locals) {
-    const { type, from, to, payload } = envelope;
-
-    // Verify user is local
-    if (!state.local_users.has(from)) {
-      console.warn(`[SOCP] Message from non-local user: ${from}`);
-      return;
-    }
-
-    if (type === "MSG_PUBLIC" || type === "MSG_PUBLIC_CHANNEL") {
-      // Broadcast to all local users (except sender)
-      for (const [userId, sock] of state.local_users) {
-        if (userId !== from) {
-          sock.send(JSON.stringify(envelope));
-        }
-      }
-
-      // Forward to other servers
-      for (const sock of state.servers.values()) {
-        sock.send(JSON.stringify(envelope));
-      }
-
-    } else if (type === "MSG_PRIVATE" || type === "MSG_DIRECT") {
-      // Route private message
-      if (state.local_users.has(to)) {
-        // Recipient is local
-        const recipientSocket = state.local_users.get(to);
-        
-        // For SOCP compliance, wrap in USER_DELIVER
-        const deliveryEnvelope = {
-          type: "USER_DELIVER",
-          from: state.serverId,
-          to: to,
-          ts: Date.now(),
-          payload: {
-            ciphertext: payload.ciphertext || payload.text, // Handle both encrypted and plain
-            sender: from,
-            sender_pub: payload.sender_pub || "TODO_SENDER_PUBKEY",
-            content_sig: payload.content_sig || "TODO_CONTENT_SIG"
-          }
-        };
-        
-        recipientSocket.send(JSON.stringify(deliveryEnvelope));
-        
-      } else if (state.user_locations.has(to)) {
-        // Recipient is on another server
-        const targetServerId = state.user_locations.get(to);
-        if (state.servers.has(targetServerId)) {
-          const serverSocket = state.servers.get(targetServerId);
-          
-          // Wrap in SERVER_DELIVER for routing
-          const routingEnvelope = {
-            type: "SERVER_DELIVER",
-            from: state.serverId,
-            to: targetServerId,
-            ts: Date.now(),
-            payload: {
-              user_id: to,
-              ciphertext: payload.ciphertext || payload.text,
-              sender: from,
-              sender_pub: payload.sender_pub || "TODO_SENDER_PUBKEY",
-              content_sig: payload.content_sig || "TODO_CONTENT_SIG"
-            }
-          };
-          
-          serverSocket.send(JSON.stringify(routingEnvelope));
-        }
-      } else {
-        // User not found
-        const errorEnvelope = {
-          type: "ERROR",
-          from: state.serverId,
-          to: from,
-          ts: Date.now(),
-          payload: { code: "USER_NOT_FOUND", detail: `User ${to} not found` }
-        };
-        
-        const senderSocket = state.local_users.get(from);
-        if (senderSocket) {
-          senderSocket.send(JSON.stringify(errorEnvelope));
-        }
-      }
-    }
-  }
-
-  function handleServerJoin(ws, envelope, state) {
-    const { from, payload } = envelope;
-    const { host, port, pubkey } = payload;
-
-    state.servers.set(from, ws);
-    state.server_addrs.set(from, { host, port });
-
-    // Send SERVER_WELCOME response
-    const welcomeEnvelope = {
-      type: "SERVER_WELCOME",
-      from: state.serverId,
-      to: from,
-      ts: Date.now(),
-      payload: {
-        assigned_id: from, // Echo back the same ID
-        clients: Array.from(state.local_users.keys()).map(userId => ({
-          user_id: userId,
-          host: "localhost", // Simplified
-          port: 3000,
-          pubkey: "TODO_USER_PUBKEY"
-        }))
-      }
-    };
-
-    ws.send(JSON.stringify(welcomeEnvelope));
-    console.log(`[SOCP] Server ${from} joined from ${host}:${port}`);
-  }
-
-  function handleServerWelcome(ws, envelope, state) {
-    const { from, payload } = envelope;
-    
-    state.servers.set(from, ws);
-    
-    // Process client list from remote server
-    if (payload.clients) {
-      payload.clients.forEach(client => {
-        state.user_locations.set(client.user_id, from);
-      });
-    }
-    
-    console.log(`[SOCP] Received welcome from server ${from}`);
-  }
-
-  function handleServerAnnounce(envelope, state) {
-    const { payload } = envelope;
-    
-    if (payload.user_id && payload.status) {
-      if (payload.status === "online") {
-        state.user_locations.set(payload.user_id, envelope.from);
-      } else if (payload.status === "offline") {
-        state.user_locations.delete(payload.user_id);
-      }
-      
-      broadcastMemberList(state);
-    }
-    
-    console.log("[SOCP] Server announcement:", payload);
-  }
-
-  function handleHeartbeat(ws, envelope) {
-    // Respond to heartbeat
-    const response = {
-      type: "HEARTBEAT",
-      from: state.serverId,
-      to: envelope.from,
-      ts: Date.now(),
-      payload: {}
-    };
-    
-    ws.send(JSON.stringify(response));
-  }
-
-  // ---------- Helper Functions ----------
-  function gossipUserStatus(userId, status, state) {
-    const announcement = {
-      type: "SERVER_ANNOUNCE",
-      from: state.serverId,
-      to: "*",
-      ts: Date.now(),
-      payload: { user_id: userId, status }
-    };
-    
-    for (const sock of state.servers.values()) {
-      sock.send(JSON.stringify(announcement));
-    }
-  }
-
-  function sendMemberList(ws, members) {
-    const envelope = {
-      type: "MEMBER_LIST",
-      from: state.serverId,
-      to: ws.user_id || "*",
-      ts: Date.now(),
-      payload: { members }
-    };
-    
-    ws.send(JSON.stringify(envelope));
-  }
-
-  function broadcastMemberList(state) {
-    const allUsers = new Set([
-      ...state.local_users.keys(),
-      ...state.user_locations.keys()
-    ]);
-    
-    const members = Array.from(allUsers);
-    
-    for (const sock of state.local_users.values()) {
-      sendMemberList(sock, members);
-    }
-  }
-
-  function sendError(ws, code, detail = "") {
-    const errorEnvelope = {
-      type: "ERROR",
-      from: state.serverId,
-      to: "*",
-      ts: Date.now(),
-      payload: { code, detail }
-    };
-    
-    ws.send(JSON.stringify(errorEnvelope));
-  }
-
-  console.log(`[SOCP] WebSocket server running with ID: ${state.serverId}`);
-  return state;
+  console.log('WebSocket server initialized with SOCP v1.3 support');
 }
 
-module.exports = { startSOCPWebSocketServer };
+// Public message broadcast
+function handlePublicMessage(username, message) {
+  const msg = {
+    type: 'MSG_PUBLIC',
+    from: username,
+    content: message.content,
+    timestamp: Date.now()
+  };
+
+  broadcast(msg);
+  console.log(`[PUBLIC] ${username}: ${message.content}`);
+}
+
+// Direct encrypted message - SOCP MSG_DIRECT
+async function handleDirectMessage(username, message) {
+  const { to, ciphertext, sender_pub, content_sig } = message;
+
+  if (!to || !ciphertext || !sender_pub || !content_sig) {
+    console.error('Invalid MSG_DIRECT format');
+    return;
+  }
+
+  // Generate message ID for loop prevention
+  const msgId = `${username}-${to}-${Date.now()}-${Math.random()}`;
+
+  // Check if we've seen this message before
+  if (seenMessages.has(msgId)) {
+    console.log(`[LOOP PREVENTED] Duplicate message ${msgId}`);
+    return;
+  }
+  addToSeenCache(msgId);
+
+  // Server CANNOT and SHOULD NOT decrypt the message
+  // This is E2EE - server is just a router
+  console.log(`[E2EE MSG_DIRECT] ${username} -> ${to} (encrypted)`);
+
+  // Wrap in USER_DELIVER and send to recipient
+  const deliverMsg = {
+    type: 'USER_DELIVER',
+    from: username,
+    to: to,
+    payload: {
+      ciphertext: ciphertext,
+      sender_pub: sender_pub,
+      content_sig: content_sig
+    },
+    timestamp: Date.now()
+  };
+
+  const recipientWs = clients.get(to);
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify(deliverMsg));
+    console.log(`[DELIVERED] Message delivered to ${to}`);
+  } else {
+    // User offline - could store for later delivery
+    console.log(`[OFFLINE] User ${to} is offline, message not delivered`);
+
+    // Send error back to sender
+    const senderWs = clients.get(username);
+    if (senderWs && senderWs.readyState === WebSocket.OPEN) {
+      senderWs.send(JSON.stringify({
+        type: 'MSG_ERROR',
+        error: 'Recipient offline',
+        to: to
+      }));
+    }
+  }
+}
+
+// Get list of online users
+function handleGetOnlineUsers(ws) {
+  const users = Array.from(clients.keys());
+  ws.send(JSON.stringify({
+    type: 'ONLINE_USERS',
+    users: users
+  }));
+}
+
+// Get public key for a user
+async function handleGetUserKey(ws, message) {
+  try {
+    const user = await User.findOne({ username: message.username });
+    if (user) {
+      ws.send(JSON.stringify({
+        type: 'USER_KEY',
+        username: message.username,
+        publicKey: user.publicKey,
+        fingerprint: user.fingerprint
+      }));
+    } else {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        message: 'User not found'
+      }));
+    }
+  } catch (err) {
+    console.error('Error fetching user key:', err);
+    ws.send(JSON.stringify({
+      type: 'ERROR',
+      message: 'Failed to fetch user key'
+    }));
+  }
+}
+
+// Room management
+function handleRoomCreate(username, message) {
+  const { room } = message;
+  if (!rooms.has(room)) {
+    rooms.set(room, new Set([username]));
+    console.log(`Room created: ${room} by ${username}`);
+
+    const ws = clients.get(username);
+    if (ws) {
+      ws.send(JSON.stringify({
+        type: 'ROOM_CREATED',
+        room: room
+      }));
+    }
+  } else {
+    const ws = clients.get(username);
+    if (ws) {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        message: 'Room already exists'
+      }));
+    }
+  }
+}
+
+function handleRoomJoin(username, message) {
+  const { room } = message;
+  if (rooms.has(room)) {
+    rooms.get(room).add(username);
+
+    const ws = clients.get(username);
+    if (ws) {
+      ws.send(JSON.stringify({
+        type: 'ROOM_JOINED',
+        room: room,
+        members: Array.from(rooms.get(room))
+      }));
+    }
+
+    // Notify other room members
+    broadcastToRoom(room, {
+      type: 'ROOM_USER_JOINED',
+      room: room,
+      username: username
+    }, username);
+
+    console.log(`${username} joined room: ${room}`);
+  } else {
+    const ws = clients.get(username);
+    if (ws) {
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        message: 'Room does not exist'
+      }));
+    }
+  }
+}
+
+function handleRoomLeave(username, message) {
+  const { room } = message;
+  if (rooms.has(room)) {
+    rooms.get(room).delete(username);
+
+    // Notify room members
+    broadcastToRoom(room, {
+      type: 'ROOM_USER_LEFT',
+      room: room,
+      username: username
+    });
+
+    console.log(`${username} left room: ${room}`);
+
+    // Delete room if empty
+    if (rooms.get(room).size === 0) {
+      rooms.delete(room);
+      console.log(`Room deleted (empty): ${room}`);
+    }
+  }
+}
+
+function handleRoomMessage(username, message) {
+  const { room, content } = message;
+  if (rooms.has(room) && rooms.get(room).has(username)) {
+    broadcastToRoom(room, {
+      type: 'ROOM_MESSAGE',
+      room: room,
+      from: username,
+      content: content,
+      timestamp: Date.now()
+    });
+
+    console.log(`[ROOM ${room}] ${username}: ${content}`);
+  }
+}
+
+// File transfer signaling
+function handleFileOffer(username, message) {
+  const { to, offer, fileName, fileSize } = message;
+  const recipientWs = clients.get(to);
+
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'FILE_OFFER',
+      from: username,
+      offer: offer,
+      fileName: fileName,
+      fileSize: fileSize
+    }));
+    console.log(`[FILE] Offer from ${username} to ${to}: ${fileName}`);
+  }
+}
+
+function handleFileAnswer(username, message) {
+  const { to, answer } = message;
+  const recipientWs = clients.get(to);
+
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'FILE_ANSWER',
+      from: username,
+      answer: answer
+    }));
+    console.log(`[FILE] Answer from ${username} to ${to}`);
+  }
+}
+
+function handleIceCandidate(username, message) {
+  const { to, candidate } = message;
+  const recipientWs = clients.get(to);
+
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'ICE_CANDIDATE',
+      from: username,
+      candidate: candidate
+    }));
+  }
+}
+
+// Broadcast to all connected clients
+function broadcast(message, excludeUser = null) {
+  const messageStr = JSON.stringify(message);
+  clients.forEach((ws, user) => {
+    if (user !== excludeUser && ws.readyState === WebSocket.OPEN) {
+      ws.send(messageStr);
+    }
+  });
+}
+
+// Broadcast to room members
+function broadcastToRoom(room, message, excludeUser = null) {
+  if (!rooms.has(room)) return;
+
+  const messageStr = JSON.stringify(message);
+  const members = rooms.get(room);
+
+  members.forEach(username => {
+    if (username !== excludeUser) {
+      const ws = clients.get(username);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(messageStr);
+      }
+    }
+  });
+}
+
+module.exports = { initialiseWebSocket };

@@ -1,58 +1,66 @@
-#!/usr/bin/env node
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ */
+
+const createError = require("http-errors");
+const express = require("express");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
 require("dotenv").config();
 
-const http = require("http");
-const app  = require("./app");
+const indexRouter = require("./routes/index");
+const usersRouter = require("./routes/users");
+const profileRouter = require("./routes/profile");
+const authRouter = require("./routes/auth");
 
-const { startSOCPWebSocketServer } = require("./ws");
-const DatabaseManager = require("./database");
-const CryptoManager   = require("./crypto/CryptoManager");
+// Import WebSocket initialiser
+const { initialiseWebSocket } = require("./ws");
 
-// ---------- LOCALS ----------
-app.locals.db            = new DatabaseManager();
-app.locals.cryptoManager = new CryptoManager();
+const app = express();
 
-// ---------- DB-DEPENDENT ROUTES ----------
-const authRoutes    = require("./routes/auth");     
-const profileRoutes = require("./routes/profile");  
-const usersRoutes   = require("./routes/users");   
+// ---------- VIEWS ----------
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "ejs");
 
-app.use("/api",         authRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/users",       usersRoutes);    
+// ---------- MIDDLEWARE ----------
+app.use(logger("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
-// ---------- SERVER ----------
-const port = normalizePort(process.env.PORT || "3000");
-app.set("port", port);
+// ---------- STATIC FILES ----------
+app.use(express.static(path.join(__dirname, "public")));
 
-const server = http.createServer(app);
+// ---------- ROUTES ----------
+app.use("/", indexRouter);
+app.use("/users", usersRouter);
+app.use("/profile", profileRouter);
+app.use("/api/auth", authRouter);
 
-// ---------- WS ----------
-startSOCPWebSocketServer(server, app.locals);
+// ---------- ERROR HANDLING ----------
+app.use(function (req, res, next) {
+  next(createError(404));
+});
 
-// ---------- LISTEN ----------
-server.listen(port);
-server.on("error", onError);
-server.on("listening", onListening);
+app.use(function (err, req, res, next) {
+  res.locals.message = err.message;
+  res.locals.error = req.app.get("env") === "development" ? err : {};
+  res.status(err.status || 500);
+  res.render("error");
+});
 
-function normalizePort(val) {
-  const p = parseInt(val, 10);
-  if (isNaN(p)) return val;
-  if (p >= 0) return p;
-  return false;
-}
+// ---------- START SERVER ----------
+const port = process.env.PORT || 3000;
+const server = app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
 
-function onError(error) {
-  if (error.syscall !== "listen") throw error;
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-  switch (error.code) {
-    case "EACCES":    console.error(bind + " requires elevated privileges"); process.exit(1);
-    case "EADDRINUSE":console.error(bind + " is already in use");            process.exit(1);
-    default: throw error;
-  }
-}
+// ---------- INITIALISE WEBSOCKET ----------
+initialiseWebSocket(server);
 
-function onListening() {
-  const addr = server.address();
-  console.log(`Server running at http://localhost:${addr.port}`);
-}
+module.exports = app;

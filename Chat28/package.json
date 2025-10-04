@@ -1,28 +1,37 @@
 {
   "name": "chat28",
   "version": "1.0.0",
-  "private": true,
+  "description": "SOCP v1.3 Compliant E2EE Chat Application",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "echo \"See TESTING.md for testing procedures\" && exit 0"
   },
+  "keywords": [
+    "chat",
+    "e2ee",
+    "socp",
+    "websocket",
+    "encryption"
+  ],
+  "author": "Group 28",
+  "license": "",
   "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.6",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "debug": "^4.3.6",
-    "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
-    "express": "^4.21.2",
-    "helmet": "^8.1.0",
-    "http-errors": "^2.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.19.0",
-    "morgan": "^1.10.1",
-    "uuid": "^9.0.1",
-    "ws": "^8.18.3"
+    "mongoose": "^8.0.3",
+    "morgan": "^1.10.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

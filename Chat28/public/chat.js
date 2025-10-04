@@ -1,471 +1,822 @@
-// -------------------- State --------------------
-let currentMessageType = 'public';
-let dragCounter = 0;
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ */
+
+// Global state
 let ws = null;
 let currentUsername = null;
+let currentUserPrivateKey = null;
+let currentUserPublicKey = null;
 let onlineUsers = new Set();
-let reconnectAttempts = 0;
-const maxReconnectAttempts = 5;
+let publicKeysCache = new Map();
+let currentMessageType = 'public';
 
-// -------------------- Boot --------------------
-document.addEventListener('DOMContentLoaded', () => {
-  const chatContainer = document.querySelector('.chat-container');
-  chatContainer.addEventListener('dragenter', handleDragEnter);
-  chatContainer.addEventListener('dragleave', handleDragLeave);
-  chatContainer.addEventListener('dragover', handleDragOver);
-  chatContainer.addEventListener('drop', handleDrop);
-  document.getElementById('messageInput').focus();
+// ========== CRYPTO FUNCTIONS ==========
+class CryptoHelper {
+    static async importPublicKey(pemKey) {
+        const pemHeader = "-----BEGIN PUBLIC KEY-----";
+        const pemFooter = "-----END PUBLIC KEY-----";
+        const pemContents = pemKey.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
+        const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
 
-  // Check authentication
-  const token = localStorage.getItem('token');
-  if (!token) {
-    window.location.href = '/login.html';
-    return;
-  }
+        return await crypto.subtle.importKey(
+            'spki',
+            binaryDer,
+            { name: 'RSA-OAEP', hash: 'SHA-256' },
+            true,
+            ['encrypt']
+        );
+    }
 
-  currentUsername = localStorage.getItem('username') || 'Unknown';
-  connectWebSocket();
+    static async importPrivateKey(pemKey) {
+        const pemHeader = "-----BEGIN PRIVATE KEY-----";
+        const pemFooter = "-----END PRIVATE KEY-----";
+        const pemContents = pemKey.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
+        const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+        return await crypto.subtle.importKey(
+            'pkcs8',
+            binaryDer,
+            { name: 'RSA-OAEP', hash: 'SHA-256' },
+            true,
+            ['decrypt']
+        );
+    }
+
+    static async encrypt(plaintext, publicKeyPem) {
+        const publicKey = await this.importPublicKey(publicKeyPem);
+        const encoded = new TextEncoder().encode(plaintext);
+        const encrypted = await crypto.subtle.encrypt(
+            { name: 'RSA-OAEP' },
+            publicKey,
+            encoded
+        );
+        return this.arrayBufferToBase64Url(encrypted);
+    }
+
+    static async decrypt(ciphertextBase64, privateKeyPem) {
+        const privateKey = await this.importPrivateKey(privateKeyPem);
+        const ciphertext = this.base64UrlToArrayBuffer(ciphertextBase64);
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'RSA-OAEP' },
+            privateKey,
+            ciphertext
+        );
+        return new TextDecoder().decode(decrypted);
+    }
+
+    static arrayBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    static base64UrlToArrayBuffer(base64url) {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+}
+
+// ========== INITIALISATION ==========
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[INIT] Starting Chat28...');
+
+    const params = new URLSearchParams(window.location.search);
+    const u = params.get('u') || localStorage.getItem('activeUser');
+
+    if (!u) {
+        window.location.href = '/login.html';
+        return;
+    }
+    currentUsername = u;
+
+    // pull per-user values
+    const token = localStorage.getItem(`token_${u}`);
+    currentUserPublicKey = localStorage.getItem(`publicKey_${u}`);
+    currentUserPrivateKey = localStorage.getItem(`privateKey_${u}`);
+
+    if (!token || !currentUserPublicKey) {
+        alert('Missing credentials. Please login again.');
+        logout();
+        return;
+    }
+
+    // keep token in a variable for the WS auth step
+    window.__tokenForWS = token;
+
+
+    currentUsername = localStorage.getItem('username');
+    currentUserPublicKey = localStorage.getItem('publicKey');
+    currentUserPrivateKey = localStorage.getItem(`privateKey_${currentUsername}`);
+
+    if (!currentUsername || !currentUserPublicKey) {
+        alert('Missing credentials. Please login again.');
+        logout();
+        return;
+    }
+
+    if (!currentUserPrivateKey) {
+        console.warn('[INIT] No private key - cannot decrypt messages');
+    }
+
+    console.log('[INIT] Logged in as:', currentUsername);
+
+    // Update UI
+    updateConnectionStatus('connecting');
+
+    // Connect WebSocket
+    connectWebSocket();
 });
 
-// -------------------- WebSocket --------------------
+// ========== WEBSOCKET CONNECTION ==========
 function connectWebSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
 
-  updateConnectionStatus('connecting');
+    console.log('[WS] Connecting to:', wsUrl);
+    ws = new WebSocket(wsUrl);
 
-  ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+        console.log('[WS] Connected');
+        updateConnectionStatus('connected');
 
-  ws.onopen = () => {
-    updateConnectionStatus('connected');
-    reconnectAttempts = 0;
-    // Send USER_HELLO as per SOCP
-    sendWebSocketMessage('USER_HELLO', currentUsername, '*', {
-      client: 'chat28-v1',
-      pubkey: 'TODO_RSA_PUBKEY', // Will be generated properly later
-      enc_pubkey: 'TODO_RSA_PUBKEY'
-    });
-  };
+        // Authenticate
+        const token = window.__tokenForWS;
+        ws.send(JSON.stringify({ type: 'AUTH', token }));
 
-  ws.onmessage = (event) => {
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            handleMessage(message);
+        } catch (error) {
+            console.error('[WS] Parse error:', error);
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('[WS] Disconnected');
+        updateConnectionStatus('disconnected');
+        setTimeout(connectWebSocket, 3000);
+    };
+
+    ws.onerror = (error) => {
+        console.error('[WS] Error:', error);
+        updateConnectionStatus('error');
+    };
+}
+
+// ========== MESSAGE HANDLING ==========
+function handleMessage(message) {
+    console.log('[WS] Received:', message.type);
+
+    switch (message.type) {
+        case 'AUTH_SUCCESS':
+            console.log('[AUTH] Success:', message.username);
+            displaySystemMessage('Connected as ' + message.username);
+            requestOnlineUsers();
+            break;
+
+        case 'MSG_PUBLIC':
+            displayPublicMessage(message.from, message.content, message.timestamp);
+            break;
+
+        case 'USER_DELIVER':
+            handleEncryptedMessage(message);
+            break;
+
+        case 'ONLINE_USERS':
+            updateOnlineUsers(message.users);
+            break;
+
+        case 'USER_KEY':
+            publicKeysCache.set(message.username, message.publicKey);
+            console.log('[KEY] Cached key for:', message.username);
+            break;
+
+        case 'USER_JOIN':
+            if (message.username !== currentUsername) {
+                displaySystemMessage(message.username + ' joined');
+                requestOnlineUsers();
+            }
+            break;
+
+        case 'USER_LEAVE':
+            if (message.username !== currentUsername) {
+                displaySystemMessage(message.username + ' left');
+                requestOnlineUsers();
+            }
+            break;
+
+        case 'MSG_ERROR':
+            displaySystemMessage('Error: ' + message.error, 'error');
+            break;
+
+        case 'ERROR':
+            displaySystemMessage('Server error: ' + message.message, 'error');
+            break;
+    }
+}
+
+async function handleEncryptedMessage(message) {
+    const { from, payload } = message;
+    const { ciphertext, sender_pub } = payload;
+
+    console.log('[E2EE] Encrypted message from:', from);
+
+    if (!currentUserPrivateKey) {
+        displaySystemMessage('Cannot decrypt message - no private key', 'error');
+        return;
+    }
+
     try {
-      const msg = JSON.parse(event.data);
-      handleWebSocketMessage(msg);
-    } catch (e) {
-      console.error('Bad JSON from WS:', e);
+        const plaintext = await CryptoHelper.decrypt(ciphertext, currentUserPrivateKey);
+        displayPrivateMessage(from, plaintext, false);
+        console.log('[E2EE] Decrypted successfully');
+    } catch (error) {
+        console.error('[E2EE] Decryption failed:', error);
+        displaySystemMessage('Failed to decrypt message from ' + from, 'error');
     }
-  };
-
-  ws.onclose = () => {
-    updateConnectionStatus('disconnected');
-    if (reconnectAttempts < maxReconnectAttempts) {
-      const delay = Math.min(1000 * (2 ** reconnectAttempts), 10000);
-      reconnectAttempts++;
-      setTimeout(connectWebSocket, delay);
-    }
-  };
-
-  ws.onerror = () => {
-    updateConnectionStatus('error');
-  };
 }
 
-function sendWebSocketMessage(type, from, to, payload) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    displaySystemMessage('Not connected. Try reconnect.');
-    return;
-  }
-  ws.send(JSON.stringify({ type, from, to, ts: Date.now(), payload }));
-}
-
-// -------------------- WS Message Handling --------------------
-function handleWebSocketMessage(message) {
-  const { type, from, payload } = message;
-
-  switch (type) {
-    case 'MEMBER_LIST': {
-      const list = payload?.members || [];
-      onlineUsers = new Set(list);
-      renderOnlineUsers();
-      updateMemberCount();
-      break;
-    }
-
-    case 'MSG_PUBLIC': {
-      const { text } = payload || {};
-      if (typeof text === 'string') displayPublicMessage(from, text);
-      break;
-    }
-
-    case 'MSG_PRIVATE': {
-      const { text } = payload || {};
-      if (typeof text === 'string') displayPrivateMessage(from, text);
-      break;
-    }
-
-    case 'USER_DELIVER': {
-      // SOCP message delivery
-      const { ciphertext, sender, sender_pub, content_sig } = payload || {};
-      if (ciphertext) {
-        // For now, display as encrypted (should decrypt with private key)
-        displayPrivateMessage(sender, `[Encrypted: ${ciphertext.substring(0, 20)}...]`);
-      }
-      break;
-    }
-
-    case 'ERROR': {
-      const code = payload?.code || 'UNKNOWN_ERROR';
-      displaySystemMessage(`Error: ${code}`);
-      break;
-    }
-
-    default:
-      console.log('[WS] unhandled type:', type, payload);
-  }
-}
-
-// -------------------- UI Functions --------------------
-function displayPublicMessage(sender, text) {
-  const container = document.getElementById('messageContainer');
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message public-message';
-  
-  const time = new Date().toLocaleTimeString();
-  messageDiv.innerHTML = `
-    <div class="message-header">
-      <span class="sender">${escapeHtml(sender)}</span>
-      <span class="timestamp">${time}</span>
-    </div>
-    <div class="message-content">${escapeHtml(text)}</div>
-  `;
-  
-  container.appendChild(messageDiv);
-  container.scrollTop = container.scrollHeight;
-}
-
-function displayPrivateMessage(sender, text) {
-  const container = document.getElementById('messageContainer');
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message private-message';
-  
-  const time = new Date().toLocaleTimeString();
-  messageDiv.innerHTML = `
-    <div class="message-header">
-      <span class="sender">🔒 ${escapeHtml(sender)}</span>
-      <span class="timestamp">${time}</span>
-    </div>
-    <div class="message-content">${escapeHtml(text)}</div>
-  `;
-  
-  container.appendChild(messageDiv);
-  container.scrollTop = container.scrollHeight;
-}
-
-function displaySystemMessage(text) {
-  const container = document.getElementById('messageContainer');
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message system-message';
-  messageDiv.textContent = text;
-  
-  container.appendChild(messageDiv);
-  container.scrollTop = container.scrollHeight;
-}
-
-function renderOnlineUsers() {
-  const container = document.getElementById('onlineUsers');
-  const recipientSelect = document.getElementById('recipientSelect');
-  
-  container.innerHTML = '';
-  recipientSelect.innerHTML = '<option value="">Select a user...</option>';
-  
-  onlineUsers.forEach(userId => {
-    // Online users list
-    const userDiv = document.createElement('div');
-    userDiv.className = 'user-item online';
-    userDiv.innerHTML = `
-      <div class="user-status online"></div>
-      <div class="user-name">${escapeHtml(userId)}</div>
-    `;
-    container.appendChild(userDiv);
-    
-    // Recipient dropdown (exclude self)
-    if (userId !== currentUsername) {
-      const option = document.createElement('option');
-      option.value = userId;
-      option.textContent = userId;
-      recipientSelect.appendChild(option);
-    }
-  });
-}
-
-function updateConnectionStatus(status) {
-  const statusElement = document.getElementById('connectionStatus');
-  const statusMap = {
-    connecting: { icon: 'fa-circle-notch fa-spin', text: 'Connecting...', class: 'connecting' },
-    connected: { icon: 'fa-circle', text: 'Connected', class: 'connected' },
-    disconnected: { icon: 'fa-circle', text: 'Disconnected', class: 'disconnected' },
-    error: { icon: 'fa-exclamation-triangle', text: 'Error', class: 'error' }
-  };
-  
-  const config = statusMap[status] || statusMap.error;
-  statusElement.innerHTML = `<i class="fa-solid ${config.icon}"></i> ${config.text}`;
-  statusElement.className = `connection-status ${config.class}`;
-}
-
-function updateMemberCount() {
-  const countElement = document.getElementById('memberCount');
-  if (countElement) {
-    countElement.textContent = onlineUsers.size;
-  }
-  
-  const subtitle = document.getElementById('chatSubtitle');
-  if (subtitle) {
-    subtitle.textContent = `${onlineUsers.size} online members`;
-  }
-}
-
-// -------------------- Message Sending --------------------
+// ========== SENDING MESSAGES ==========
 function sendMessage() {
-  const input = document.getElementById('messageInput');
-  const text = input.value.trim();
-  
-  if (!text) return;
-  
-  // Check for SOCP mandatory commands
-  if (text.startsWith('/')) {
-    handleCommand(text);
-  } else {
-    if (currentMessageType === 'public') {
-      sendPublicMessage(text);
-    } else if (currentMessageType === 'private') {
-      sendPrivateMessage(text);
-    }
-  }
-  
-  input.value = '';
-  adjustHeight(input);
-}
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
 
-// -------------------- SOCP Mandatory Commands --------------------
-function handleCommand(text) {
-  const parts = text.split(' ');
-  const command = parts[0].toLowerCase();
-  
-  switch (command) {
-    case '/list':
-      handleListCommand();
-      break;
-      
-    case '/tell':
-      if (parts.length < 3) {
-        displaySystemMessage('Usage: /tell <username> <message>');
-        return;
-      }
-      const recipient = parts[1];
-      const message = parts.slice(2).join(' ');
-      handleTellCommand(recipient, message);
-      break;
-      
-    case '/all':
-      if (parts.length < 2) {
-        displaySystemMessage('Usage: /all <message>');
-        return;
-      }
-      const publicMessage = parts.slice(1).join(' ');
-      handleAllCommand(publicMessage);
-      break;
-      
-    case '/file':
-      if (parts.length < 3) {
-        displaySystemMessage('Usage: /file <username> <filepath>');
-        return;
-      }
-      const fileRecipient = parts[1];
-      const filepath = parts.slice(2).join(' ');
-      handleFileCommand(fileRecipient, filepath);
-      break;
-      
-    default:
-      displaySystemMessage(`Unknown command: ${command}. Available: /list, /tell, /all, /file`);
-  }
-}
+    if (!text) return;
 
-async function handleListCommand() {
-  try {
-    const token = localStorage.getItem('token');
-    const res = await fetch('/users/all', {  // Changed from /api/users to /users/all
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      const userList = data.users.map(u => 
-        `${u.username} (${u.meta?.status || 'unknown'})`
-      ).join(', ');
-      displaySystemMessage(`All users (${data.count}): ${userList}`);
+    if (text.startsWith('/')) {
+        handleCommand(text);
     } else {
-      displaySystemMessage('Failed to get user list');
+        if (currentMessageType === 'public') {
+            sendPublicMessage(text);
+        } else if (currentMessageType === 'private') {
+            sendPrivateMessage(text);
+        }
     }
-  } catch (err) {
-    displaySystemMessage('Error getting user list: ' + err.message);
-  }
-}
 
-function handleTellCommand(recipient, message) {
-  // Use existing private message system but with command format
-  sendWebSocketMessage('MSG_DIRECT', currentUsername, recipient, { 
-    text: message,
-    ciphertext: message, // TODO: proper RSA encryption
-    sender_pub: localStorage.getItem('pubkey') || 'TODO_PUBKEY',
-    content_sig: 'TODO_CONTENT_SIG'
-  });
-  displayPrivateMessage(`To ${recipient}`, message);
-}
-
-function handleAllCommand(message) {
-  // Send to public channel
-  sendWebSocketMessage('MSG_PUBLIC_CHANNEL', currentUsername, 'public', { 
-    text: message,
-    ciphertext: message, // TODO: proper group encryption
-    sender_pub: localStorage.getItem('pubkey') || 'TODO_PUBKEY',
-    content_sig: 'TODO_CONTENT_SIG'
-  });
-  displayPublicMessage(currentUsername, message);
-}
-
-function handleFileCommand(recipient, filepath) {
-  displaySystemMessage(`File transfer initiated: ${filepath} -> ${recipient}`);
-  // TODO: Implement SOCP file transfer protocol
-  // For now, just show the command was recognized
-  displaySystemMessage('File transfer not yet implemented');
+    input.value = '';
 }
 
 function sendPublicMessage(text) {
-  // For SOCP compliance, this should be MSG_PUBLIC_CHANNEL with encryption
-  sendWebSocketMessage('MSG_PUBLIC', currentUsername, '*', { text });
-  displayPublicMessage(currentUsername, text); // Show locally
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        displaySystemMessage('Not connected', 'error');
+        return;
+    }
+
+    ws.send(JSON.stringify({
+        type: 'MSG_PUBLIC',
+        content: text
+    }));
+
+    displayPublicMessage(currentUsername, text, Date.now());
 }
 
-function sendPrivateMessage(text) {
-  const recipient = document.getElementById('recipientSelect').value;
-  if (!recipient) {
-    alert('Please select a recipient for private messages');
-    return;
-  }
-  
-  // For SOCP compliance, this should be MSG_DIRECT with RSA encryption
-  sendWebSocketMessage('MSG_PRIVATE', currentUsername, recipient, { text });
-  displayPrivateMessage(`To ${recipient}`, text); // Show locally
+async function sendPrivateMessage(text) {
+    const recipientSelect = document.getElementById('recipientSelect');
+    const recipient = recipientSelect.value;
+
+    if (!recipient) {
+        displaySystemMessage('Please select a recipient', 'error');
+        return;
+    }
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        displaySystemMessage('Not connected', 'error');
+        return;
+    }
+
+    try {
+        // Get recipient public key
+        let recipientKey = publicKeysCache.get(recipient);
+
+        if (!recipientKey) {
+            ws.send(JSON.stringify({
+                type: 'GET_USER_KEY',
+                username: recipient
+            }));
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            recipientKey = publicKeysCache.get(recipient);
+
+            if (!recipientKey) {
+                throw new Error('Could not get recipient key');
+            }
+        }
+
+        // Encrypt message
+        const ciphertext = await CryptoHelper.encrypt(text, recipientKey);
+
+        // Send encrypted message
+        ws.send(JSON.stringify({
+            type: 'MSG_DIRECT',
+            to: recipient,
+            ciphertext: ciphertext,
+            sender_pub: currentUserPublicKey,
+            content_sig: 'placeholder_signature'
+        }));
+
+        displayPrivateMessage(recipient, text, true);
+        console.log('[E2EE] Sent encrypted message to:', recipient);
+
+    } catch (error) {
+        console.error('[E2EE] Encryption failed:', error);
+        displaySystemMessage('Failed to send: ' + error.message, 'error');
+    }
+}
+
+// ========== COMMANDS ==========
+async function handleCommand(text) {
+    const parts = text.split(' ');
+    const command = parts[0].toLowerCase();
+
+    switch (command) {
+        case '/list':
+            requestOnlineUsers();
+            break;
+
+        case '/tell':
+            if (parts.length < 3) {
+                displaySystemMessage('Usage: /tell <username> <message>', 'error');
+                return;
+            }
+            const recipient = parts[1];
+            const message = parts.slice(2).join(' ');
+
+            // Set recipient and send
+            document.getElementById('recipientSelect').value = recipient;
+            await sendPrivateMessage(message);
+            break;
+
+        case '/all':
+            if (parts.length < 2) {
+                displaySystemMessage('Usage: /all <message>', 'error');
+                return;
+            }
+            sendPublicMessage(parts.slice(1).join(' '));
+            break;
+
+        default:
+            displaySystemMessage('Unknown command: ' + command, 'error');
+    }
+}
+
+// ========== UI FUNCTIONS ==========
+function displayPublicMessage(from, content, timestamp) {
+    const container = document.getElementById('messageContainer');
+    const div = document.createElement('div');
+    div.className = from === currentUsername ? 'my message' : 'other message';
+
+    const time = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+        <div class="message-content">
+            <div class="message-header">
+                <span class="message-sender">${escapeHtml(from)}</span>
+                <span>Public</span>
+            </div>
+            <div class="text">${escapeHtml(content)}</div>
+            <div class="message-time">${time}</div>
+        </div>
+    `;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function displayPrivateMessage(user, content, isSent) {
+    const container = document.getElementById('messageContainer');
+    const div = document.createElement('div');
+    div.className = isSent ? 'my message private-message' : 'other message private-message';
+
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const label = isSent ? `To ${user}` : `From ${user}`;
+
+    div.innerHTML = `
+        <div class="message-content">
+            <div class="message-header">
+                <span class="message-sender">🔒 ${label}</span>
+                <span>Private (E2EE)</span>
+            </div>
+            <div class="text">${escapeHtml(content)}</div>
+            <div class="message-time">${time}</div>
+        </div>
+    `;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function displaySystemMessage(text, type = 'info') {
+    const container = document.getElementById('messageContainer');
+    const div = document.createElement('div');
+    div.className = 'system-message' + (type === 'error' ? ' error' : '');
+    div.textContent = text;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function updateOnlineUsers(users) {
+    onlineUsers = new Set(users);
+
+    const container = document.getElementById('onlineUsers');
+    const recipientSelect = document.getElementById('recipientSelect');
+
+    container.innerHTML = '';
+    recipientSelect.innerHTML = '<option value="">Select a user...</option>';
+
+    users.forEach(user => {
+        if (user !== currentUsername) {
+            // Sidebar user item
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-item online';
+            userDiv.innerHTML = `
+                <div class="user-avatar"></div>
+                <span class="user-name">${escapeHtml(user)}</span>
+                <button class="dm-btn" onclick="startPrivateChat('${user}')">DM</button>
+            `;
+            container.appendChild(userDiv);
+
+            // Recipient select option
+            const option = document.createElement('option');
+            option.value = user;
+            option.textContent = user;
+            recipientSelect.appendChild(option);
+
+            // Request public key
+            if (!publicKeysCache.has(user)) {
+                ws.send(JSON.stringify({
+                    type: 'GET_USER_KEY',
+                    username: user
+                }));
+            }
+        }
+    });
+
+    document.getElementById('memberCount').textContent = users.length;
+    document.getElementById('chatSubtitle').textContent = `${users.length} members online`;
+}
+
+function updateConnectionStatus(status) {
+    const statusEl = document.getElementById('connectionStatus');
+    const configs = {
+        connecting: { icon: 'fa-circle-notch fa-spin', text: 'Connecting...', color: '#ffa500' },
+        connected: { icon: 'fa-circle', text: 'Connected', color: '#4CAF50' },
+        disconnected: { icon: 'fa-circle', text: 'Reconnecting...', color: '#ff9800' },
+        error: { icon: 'fa-exclamation-triangle', text: 'Error', color: '#f44336' }
+    };
+
+    const config = configs[status] || configs.error;
+    statusEl.innerHTML = `<i class="fa-solid ${config.icon}" style="color: ${config.color};"></i> ${config.text}`;
 }
 
 function setMessageType(type, button) {
-  currentMessageType = type;
-  
-  // Update button states
-  document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
-  button.classList.add('active');
-  
-  // Show/hide recipient selector
-  const recipientSelector = document.getElementById('recipientSelector');
-  recipientSelector.style.display = type === 'private' ? 'block' : 'none';
+    currentMessageType = type;
+    document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    document.getElementById('recipientSelector').style.display = type === 'private' ? 'block' : 'none';
 }
 
-// -------------------- Utility Functions --------------------
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function startPrivateChat(username) {
+    const privateBtn = document.querySelectorAll('.type-btn')[1];
+    setMessageType('private', privateBtn);
+    document.getElementById('recipientSelect').value = username;
+    document.getElementById('messageInput').focus();
 }
 
-function adjustHeight(textarea) {
-  textarea.style.height = 'auto';
-  textarea.style.height = textarea.scrollHeight + 'px';
-}
-
-function handleKeyPress(event) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
-}
-
-// -------------------- File Handling --------------------
-function handleDragEnter(e) {
-  e.preventDefault();
-  dragCounter++;
-  document.getElementById('dropZone').style.display = 'flex';
-}
-
-function handleDragLeave(e) {
-  e.preventDefault();
-  dragCounter--;
-  if (dragCounter === 0) {
-    document.getElementById('dropZone').style.display = 'none';
-  }
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-}
-
-function handleDrop(e) {
-  e.preventDefault();
-  dragCounter = 0;
-  document.getElementById('dropZone').style.display = 'none';
-  
-  const files = Array.from(e.dataTransfer.files);
-  handleFiles(files);
-}
-
-function triggerFileInput() {
-  document.getElementById('fileInput').click();
-}
-
-function handleFileSelect(event) {
-  const files = Array.from(event.target.files);
-  handleFiles(files);
-}
-
-function handleFiles(files) {
-  files.forEach(file => {
-    displaySystemMessage(`File selected: ${file.name} (${file.size} bytes)`);
-    // TODO: Implement SOCP file transfer protocol
-  });
-}
-
-// -------------------- UI Actions --------------------
-function addEmoji() {
-  const input = document.getElementById('messageInput');
-  const emojis = ['😀', '😂', '😍', '🤔', '👍', '❤️', '🎉', '🔥'];
-  const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-  input.value += emoji;
-  input.focus();
+function requestOnlineUsers() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'GET_ONLINE_USERS'
+        }));
+    }
 }
 
 function reconnectWebSocket() {
-  if (ws) {
-    ws.close();
-  }
-  reconnectAttempts = 0;
-  connectWebSocket();
-}
-
-function showProfile() {
-  window.location.href = '/profile.html';
-}
-
-function showChannelInfo() {
-  alert('Public Channel - All members can see messages here');
+    if (ws) ws.close();
+    connectWebSocket();
 }
 
 function toggleMode() {
-  const body = document.body;
-  const currentTheme = body.dataset.theme || 'light';
-  body.dataset.theme = currentTheme === 'light' ? 'dark' : 'light';
+    const body = document.body;
+    const currentTheme = body.dataset.theme || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    body.dataset.theme = newTheme;
+    localStorage.setItem('theme', newTheme);
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('username');
-  window.location.href = '/login.html';
+    if (confirm('Logout?')) {
+        const u = currentUsername || localStorage.getItem('activeUser');
+        if (u) {
+            localStorage.removeItem(`token_${u}`);
+            localStorage.removeItem(`publicKey_${u}`);
+            localStorage.removeItem(`fingerprint_${u}`);
+            // localStorage.removeItem(`privateKey_${u}`);
+            if (localStorage.getItem('activeUser') === u) {
+                localStorage.removeItem('activeUser');
+            }
+        }
+        if (ws) ws.close();
+        window.location.href = '/login.html';
+    }
+}
+
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+function adjustHeight(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// -------------------- FILE TRANSFER --------------------
+const FILE_CHUNK_SIZE = 64 * 1024; // 64KB per chunk
+let sendingInProgress = {}; // recipient -> transfer metadata
+let receivingInProgress = {}; // transferId -> {chunks:[], meta}
+
+// Called when user picks a file
+async function onFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Ask which recipient (only for private file transfer)
+    const recipientSelect = document.getElementById('recipientSelect');
+    let recipient = recipientSelect.value;
+    if (!recipient) {
+        // if no recipient selected, try to prompt - we require a recipient for now
+        recipient = prompt('Enter recipient username for the file (private transfer):');
+        if (!recipient) {
+            displaySystemMessage('File transfer cancelled: no recipient selected', 'error');
+            return;
+        }
+    }
+
+    // confirm
+    if (!confirm(`Send "${file.name}" (${(file.size / 1024).toFixed(1)} KB) to ${recipient}?`)) {
+        return;
+    }
+
+    try {
+        await sendFile(file, recipient);
+    } catch (err) {
+        console.error('File send failed:', err);
+        displaySystemMessage('File send failed: ' + err.message, 'error');
+    } finally {
+        // clear file input
+        event.target.value = '';
+    }
+}
+
+// Send file in chunks via WS using FILE_OFFER messages (wrapped by server routing)
+async function sendFile(file, recipient) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        throw new Error('Not connected');
+    }
+
+    // Generate a transfer ID
+    const transferId = `${localStorage.getItem('username') || currentUsername}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const meta = {
+        transferId,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type || 'application/octet-stream',
+        from: currentUsername,
+        to: recipient,
+        chunkCount: Math.ceil(file.size / FILE_CHUNK_SIZE)
+    };
+
+    sendingInProgress[transferId] = { meta, sentChunks: 0 };
+
+    displaySystemMessage(`Starting file transfer "${meta.fileName}" → ${recipient}`, 'info');
+    document.getElementById('fileTransferStatus').textContent = `Sending ${meta.fileName} to ${recipient} — 0%`;
+
+    // Send an initial FILE_OFFER message with metadata (recipient will accept/reject)
+    ws.send(JSON.stringify({
+        type: 'FILE_OFFER',
+        to: recipient,
+        transferId,
+        fileName: meta.fileName,
+        fileSize: meta.fileSize,
+        fileType: meta.fileType,
+        chunkCount: meta.chunkCount
+    }));
+
+    // Wait for FILE_ANSWER from recipient (accept/reject). We'll rely on server routing;
+    // a real app would use a proper ack mechanism; here we poll receiving state for a short time.
+    // We'll set up a promise that resolves when recipient sends FILE_ANSWER with accept=true
+
+    const answer = await waitForFileAnswer(transferId, 30000); // 30s timeout
+    if (!answer || !answer.accept) {
+        delete sendingInProgress[transferId];
+        document.getElementById('fileTransferStatus').textContent = '';
+        displaySystemMessage('File transfer declined or timed out', 'error');
+        return;
+    }
+
+    // Start streaming chunks
+    const reader = file.stream().getReader();
+    let chunkIndex = 0;
+    let done = false;
+
+    while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value && value.length) {
+            // send chunk (base64)
+            const chunkArray = new Uint8Array(value);
+            const chunkBase64 = arrayBufferToBase64(chunkArray);
+            ws.send(JSON.stringify({
+                type: 'FILE_CHUNK',
+                to: recipient,
+                transferId,
+                index: chunkIndex,
+                data: chunkBase64
+            }));
+
+            chunkIndex++;
+            sendingInProgress[transferId].sentChunks = chunkIndex;
+
+            // update UI
+            const percent = Math.floor((chunkIndex / meta.chunkCount) * 100);
+            document.getElementById('fileTransferStatus').textContent = `Sending ${meta.fileName} — ${percent}% (${chunkIndex}/${meta.chunkCount})`;
+        }
+    }
+
+    // finished - send FILE_COMPLETE
+    ws.send(JSON.stringify({
+        type: 'FILE_COMPLETE',
+        to: recipient,
+        transferId
+    }));
+
+    document.getElementById('fileTransferStatus').textContent = '';
+    displaySystemMessage(`File transfer "${meta.fileName}" sent to ${recipient}`, 'info');
+    delete sendingInProgress[transferId];
+}
+
+// Helper: wait for FILE_ANSWER routed back to us
+function waitForFileAnswer(transferId, timeoutMs = 15000) {
+    return new Promise((resolve) => {
+        const key = `file_answer_${transferId}`;
+        let resolved = false;
+
+        function handler(message) {
+            if (message.type === 'FILE_ANSWER' && message.transferId === transferId) {
+                resolved = true;
+                ws.removeEventListener('message', wsMessageProxy);
+                resolve(message);
+            }
+        }
+
+        // We'll add a small proxy to ws.onmessage by wrapping JSON parse - integrate with existing handler
+        function wsMessageProxy(event) {
+            try {
+                const m = JSON.parse(event.data);
+                handler(m);
+            } catch (e) { }
+        }
+
+        ws.addEventListener('message', wsMessageProxy);
+
+        setTimeout(() => {
+            if (!resolved) {
+                ws.removeEventListener('message', wsMessageProxy);
+                resolve(null);
+            }
+        }, timeoutMs);
+    });
+}
+
+// Convert Uint8Array to base64 (browser)
+function arrayBufferToBase64(buffer) {
+    // buffer is Uint8Array
+    let binary = '';
+    const bytes = buffer;
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+// Convert base64 to Uint8Array
+function base64ToUint8Array(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+// Handle incoming file messages 
+async function handleFileMessage(message) {
+    switch (message.type) {
+        case 'FILE_OFFER': {
+            // Someone wants to send a file to us
+            const { from, transferId, fileName, fileSize, fileType, chunkCount } = message;
+            // Prompt accept/reject - keep simple
+            const accept = confirm(`${from} wants to send "${fileName}" (${(fileSize / 1024).toFixed(1)} KB). Accept?`);
+            // Send FILE_ANSWER (server will route to sender)
+            ws.send(JSON.stringify({
+                type: 'FILE_ANSWER',
+                to: from,
+                transferId,
+                accept: !!accept
+            }));
+            if (accept) {
+                // Prepare receiving state
+                receivingInProgress[transferId] = {
+                    from,
+                    fileName,
+                    fileSize,
+                    fileType,
+                    chunkCount,
+                    chunks: [],
+                    receivedCount: 0
+                };
+                displaySystemMessage(`Accepted file "${fileName}" from ${from}. Receiving...`);
+                document.getElementById('fileTransferStatus').textContent = `Receiving ${fileName} — 0%`;
+            }
+            break;
+        }
+
+        case 'FILE_CHUNK': {
+            const { transferId, index, data } = message;
+            const state = receivingInProgress[transferId];
+            if (!state) {
+                console.warn('Received chunk for unknown transfer:', transferId);
+                return;
+            }
+            state.chunks[index] = data; // store base64 chunk
+            state.receivedCount++;
+            // update progress UI
+            const percent = Math.floor((state.receivedCount / state.chunkCount) * 100);
+            document.getElementById('fileTransferStatus').textContent = `Receiving ${state.fileName} — ${percent}% (${state.receivedCount}/${state.chunkCount})`;
+            break;
+        }
+
+        case 'FILE_COMPLETE': {
+            const { transferId } = message;
+            const state = receivingInProgress[transferId];
+            if (!state) return;
+            const combined = state.chunks.join(''); // concatenated base64 string of chunks
+            // convert base64 to binary
+            const bytes = base64ToUint8Array(combined);
+            const blob = new Blob([bytes], { type: state.fileType || 'application/octet-stream' });
+            // create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = state.fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            displaySystemMessage(`Received file "${state.fileName}" from ${state.from}. Saved locally.`, 'info');
+            document.getElementById('fileTransferStatus').textContent = '';
+            delete receivingInProgress[transferId];
+            break;
+        }
+
+        case 'FILE_ANSWER': {
+            // these are handled by waitForFileAnswer in the sender; we also show feedback
+            const { transferId, accept, from } = message;
+            if (!accept) {
+                displaySystemMessage(`${from} declined file transfer ${transferId}`, 'error');
+                delete sendingInProgress[transferId];
+                document.getElementById('fileTransferStatus').textContent = '';
+            } else {
+                displaySystemMessage(`${from} accepted file transfer ${transferId}. Upload starting...`, 'info');
+            }
+            break;
+        }
+    }
 }

@@ -1,3 +1,11 @@
+/**
+ * Chat28
+ * Group: UG 28
+ * Students: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+ * Course: COMP SCI 3307
+ * Assignment: Advanced Secure Protocol Design, Implementation and Review
+ */
+
 async function login() {
   const identifier = document.getElementById("username").value.trim(); // Can be username or email
   const password = document.getElementById("password").value.trim();
@@ -52,16 +60,16 @@ async function register() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        username, 
+      body: JSON.stringify({
+        username,
         email: username + "@local.test", // Temporary email for testing
-        password 
+        password
         // pubkey and privkey_store will be generated server-side for now
       })
     });
 
     const data = await res.json();
-    
+
     button.textContent = originalText;
     button.disabled = false;
 
