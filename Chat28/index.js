@@ -13,6 +13,9 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 require("dotenv").config();
 
+// IMPORT DATABASE CONNECTION
+const { connectDB } = require("./database");
+
 const indexRouter = require("./routes/index");
 const usersRouter = require("./routes/users");
 const profileRouter = require("./routes/profile");
@@ -54,13 +57,29 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-// ---------- START SERVER ----------
+// ---------- START SERVER WITH DATABASE ----------
 const port = process.env.PORT || 3000;
-const server = app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
 
-// ---------- INITIALISE WEBSOCKET ----------
-initialiseWebSocket(server);
+async function startServer() {
+  try {
+    // CONNECT TO DATABASE FIRST
+    await connectDB();
+    console.log("Database connected successfully");
+
+    // START HTTP SERVER
+    const server = app.listen(port, () => {
+      console.log(`Server running at http://localhost:${port}`);
+    });
+
+    // INITIALIZE WEBSOCKET
+    initialiseWebSocket(server);
+
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;

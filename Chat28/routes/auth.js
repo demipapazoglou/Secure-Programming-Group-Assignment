@@ -8,6 +8,7 @@
 
 const express = require("express");
 const router = express.Router();
+const bcrypt = require("bcrypt"); 
 const jwt = require("jsonwebtoken");
 const { User } = require("../database");
 const CryptoManager = require("../crypto/CryptoManager");
@@ -60,7 +61,7 @@ router.post("/register", async (req, res) => {
     });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ error: "Registration failed" });
+    res.status(500).json({ error: "Registration failed: " + err.message });
   }
 });
 
@@ -90,7 +91,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({ error: "Login failed: " + err.message });
   }
 });
 
