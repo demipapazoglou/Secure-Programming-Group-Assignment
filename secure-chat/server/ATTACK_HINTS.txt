@@ -1,0 +1,9 @@
+ATTACK_HINTS.txt
+
+VULN: IDOR
+Endpoint: GET /messages/:userId
+
+- Enable VULN_MODE=true in local .env
+- Login as testuser1
+- Try GET /messages/testuser2 (you should get their messages if VULN_MODE is on)
+- Only use provided local test accounts

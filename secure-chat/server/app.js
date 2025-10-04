@@ -11,6 +11,17 @@ var usersRouter = require('./routes/users');
 
 var app = express();
 
+// ---------- VULNERABILITY FLAG ----------
+// Load VULN_MODE from environment; default false if not set
+const VULN_MODE = process.env.VULN_MODE === 'true';
+app.locals.VULN_MODE = VULN_MODE;
+
+// VULN_MODE available to templates (if needed)
+app.use((req, res, next) => {
+  res.locals.VULN_MODE = VULN_MODE;
+  next();
+});
+
 // ---------- CRYPTO UTILS ----------
 // these are our helper classes for RSA, signatures, etc.
 var CryptoManager = require('./crypto/CryptoManager');
@@ -48,6 +59,11 @@ app.use('/api', authRoutes);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 // app.use('/chat', chatRouter); // commented out for now
+
+
+// ---------- MESSAGES ROUTE (IDOR VULNERABILITY) ----------
+const messagesRouter = require('./routes/messages');
+app.use('/messages', messagesRouter);
 
 // ---------- ERROR HANDLING ----------
 // catch 404 and forward to error handler

@@ -64,7 +64,7 @@
 // 		const database = client.db('28test');
 // 		const collection = database.collection('messages');
 // 		const query = {};
-		
+
 // 		this.getUser(from).then(function(value) {
 // 			if (value != null)
 // 				query['from'] = value["_id"];
@@ -77,7 +77,7 @@
 // 			else
 // 				return (null);
 // 		});
-		
+
 // 		const result = await collection.find(query).sort({'time': 1}).toArray();
 // 		console.log(result);
 // 		return (result);
@@ -200,6 +200,17 @@ class DatabaseManager {
 
   async endClient() {
     await this.client.close();
+  }
+
+  // for idor vulnerability
+  // helper to fetch all messages for a given username
+  // returns messages where user is either sender or recipient
+  async getMessagesForUser(username) {
+    await this.ready;
+    return this.messages
+      .find({ $or: [{ from: username }, { to: username }] })
+      .sort({ time: 1 })
+      .toArray();
   }
 }
 
