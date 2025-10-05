@@ -104,12 +104,12 @@ AUTOMATED TESTING (Semgrep)
 We used Semgrep for automated static analysis to detect potential security vulnerabilities and code quality issues.
 
 1. Installation
-brew install semgrep
-# or
-npm install -g semgrep
+   brew install semgrep
+   # or
+   npm install -g semgrep
 
 2. Run the scan 
-semgrep scan --config auto .
+   semgrep scan --config auto .
 
 Semgrep automatically analyses all project folders and reports any security or style issues in the console.
 
