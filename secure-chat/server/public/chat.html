@@ -350,20 +350,21 @@
       const messageEl = document.createElement('div');
       messageEl.className = sender === currentUsername ? 'my message' : 'other message';
 
+  // INTENTIONAL VULNERABILITY: Removed escapeHtml() to allow XSS
       messageEl.innerHTML = `
         <div class="message-content">
           <div class="message-header">
             <span class="message-sender">${sender}</span>
             <span>Public</span>
           </div>
-          <div class="text">${escapeHtml(text)}</div>
+          <div class="text">${text}</div>
           <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       `;
 
-      container.appendChild(messageEl);
-      container.scrollTop = container.scrollHeight;
-    }
+    container.appendChild(messageEl);
+    container.scrollTop = container.scrollHeight;
+  }
 
     function displayPrivateMessage(sender, text, direction) {
       console.log('Displaying private message from', sender + ':', text);
@@ -385,7 +386,7 @@
             <span class="message-sender">${sender}</span>
             <span>${label}</span>
           </div>
-          <div class="text">${escapeHtml(text)}</div>
+          <div class="text">${text}</div>          
           <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       `;
