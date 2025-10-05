@@ -11,6 +11,7 @@ TABLE OF CONTENTS
 - Installation and Setup
 - Program Usage
 - Files Included
+- Automated Testing (Semgrep)
 - Contributions
 - Acknowledgements
 
@@ -86,6 +87,10 @@ Preferred Device: Laptop/Desktop for full screen functionality
    npm start
 
    Visit http://localhost:3000
+
+===============================================================================
+PROGRAM USAGE
+===============================================================================
 
 ===============================================================================
 FILES INCLUDED
