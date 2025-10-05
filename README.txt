@@ -1,11 +1,6 @@
-Group Repository for COMP SCI 3307 - Secure Programming: Secure Chat Application Project (2025 Semester 2)
+Group Repository for COMP SCI 3307 Secure Programming Secure Chat Application Project (2025 Semester 2)
 
-The contributors for this project are members of Group 28 UG:
-- Amber Yaa Wen Chew
-- Caitlin Joyce Martyr
-- Demi Papazoglou
-- Grace Baek
-- Samira Hazara
+Group 28 UG: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
 
 ===============================================================================
 TABLE OF CONTENTS
@@ -32,9 +27,9 @@ FEATURES
 
 - One-to-one private messaging
 - Group chat support
-- End-to-end encryption (RSA-based)
+- End-to-end encryption
 - Authentication and authorisation
-- Real-time communication using WebSockets
+- Real-time communication
 
 ===============================================================================
 TECHNOLOGIES USED
@@ -48,8 +43,7 @@ Backend:
 - Database: MongoDB
 
 Frontend:
-- HTML
-- CSS stylesheets
+- Markup: HTML
 
 Security & Authentication:
 - Password Hashing: bcryptjs
@@ -62,7 +56,7 @@ INSTALLATION AND SETUP
 ===============================================================================
 
 Recommended Browser: Google Chrome  
-Preferred Device: Laptop/Desktop for full UI functionality
+Preferred Device: Laptop/Desktop for full screen functionality
 
 1. Clone the Repository 
    git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
@@ -91,10 +85,11 @@ Preferred Device: Laptop/Desktop for full UI functionality
 
 5. Start the Server 
    npm start
-   (Visit http://localhost:3000)
+
+   Visit http://localhost:3000
 
 ===============================================================================
-PROGRAM USAGE EXAMPLES
+PROGRAM USAGE
 ===============================================================================
 
 ===============================================================================
@@ -122,10 +117,10 @@ Semgrep automatically analyses all project folders and reports any security or s
 CONTRIBUTIONS
 ===============================================================================
 
-Pull requests, suggestions, and bug reports are welcome. For significant contributions, please open an issue first to discuss your ideas.
+Pull requests, suggestions, and bug reports are welcome. For significant contributions, please open an issue first to discuss the changes.
 
 ===============================================================================
 ACKNOWLEDGEMENTS
 ===============================================================================
 
-This project was developed solely for academic purposes as part of COMP SCI 3307 and is not intended for production or commercial deployment.
+This project was developed solely for academic purposes and is not intended for production or commercial deployment.
