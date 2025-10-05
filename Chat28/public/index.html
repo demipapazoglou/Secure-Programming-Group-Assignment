@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat28 - Secure Chat</title>
+    <link rel="stylesheet" href="stylesheets/login.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .landing-box {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            width: 450px;
+            padding: 3rem;
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+        .landing-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        .landing-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        .landing-description {
+            font-size: 0.95rem;
+            color: #888;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .features {
+            text-align: left;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .feature-item {
+            margin: 0.8rem 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-icon {
+            font-size: 1.3rem;
+        }
+        .feature-text {
+            font-size: 0.95rem;
+            color: #555;
+        }
+        .start-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-top: 1.5rem;
+        }
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .footer-text {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: #999;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-box">
+        <div class="landing-title">Chat28</div>
+        <div class="landing-subtitle">Secure Overlay Chat Protocol v1.3</div>
+        <div class="landing-description">
+            End-to-end encrypted chat application with military-grade RSA-4096 encryption
+        </div>
+
+        <div class="features">
+            <div class="feature-item">
+                <span class="feature-icon">🔐</span>
+                <span class="feature-text"><strong>End-to-End Encryption</strong> - Your messages are private</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✍️</span>
+                <span class="feature-text"><strong>Digital Signatures</strong> - Verify message authenticity</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">💬</span>
+                <span class="feature-text"><strong>Private & Public Chat</strong> - Flexible communication</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🌐</span>
+                <span class="feature-text"><strong>SOCP Compliant</strong> - Industry standard protocol</span>
+            </div>
+        </div>
+
+        <button class="start-button" onclick="window.location.href='login.html'">
+            Get Started
+        </button>
+
+        <div class="footer-text">
+            Secure • Private • Encrypted<br>
+            Group: UG 28
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat28</title>
+  <link rel="stylesheet" href="stylesheets/chat-style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+</head>
+
+<body data-theme="light">
+  <div class="drop-zone" id="dropZone" style="display: none;">
+    <i class="fa-solid fa-folder-open"></i>Drop files here to upload
+  </div>
+
+  <div class="navbar-top">
+    <div class="page-title">Chat28</div>
+    <div class="top-controls">
+      <button class="mode-toggle" onclick="toggleMode()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
+      <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="navbar">
+      <div class="logo"><i class="fa-solid fa-comment"></i> Chat28</div>
+      <div class="user-count">
+        <i class="fa-solid fa-users"></i> <span id="memberCount">0</span> Members Online
+      </div>
+
+      <div class="section-title">Online Members</div>
+      <div class="tab-content" id="onlineUsers"><!-- populated by WS --></div>
+
+      <div class="connection-status" id="connectionStatus">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...
+      </div>
+    </div>
+
+    <div class="main-chat">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title">Public Channel</div>
+          <div class="chat-subtitle" id="chatSubtitle">0 total members • 0 online</div>
+        </div>
+        <div class="chat-actions">
+          <button class="action-btn" onclick="reconnectWebSocket()"><i class="fa-solid fa-refresh"></i>
+            Reconnect</button>
+        </div>
+      </div>
+
+      <div class="message-container" id="messageContainer">
+        <div class="system-message">Welcome to Chat28! Connect with others in real-time.</div>
+        <div class="system-message">Commands: /list, /all &lt;message&gt;, /tell &lt;user&gt; &lt;message&gt;</div>
+      </div>
+
+      <div class="message-input-container">
+        <div class="message-type-selector">
+          <button class="type-btn active" onclick="setMessageType('public', this)">
+            <i class="fa-solid fa-globe"></i> Public
+          </button>
+          <button class="type-btn" onclick="setMessageType('private', this)">
+            <i class="fa-solid fa-lock"></i> Private
+          </button>
+        </div>
+
+        <div class="private-recipient-selector" id="recipientSelector" style="display: none;">
+          <div class="recipient-label">Send private message to:</div>
+          <select class="recipient-select" id="recipientSelect">
+            <option value="">Select a user...</option>
+          </select>
+        </div>
+
+        <div class="input-wrapper">
+          <textarea class="message-input" id="messageInput"
+            placeholder="Type your message or use /list, /all, /tell commands..." rows="1"
+            onkeydown="handleKeyPress(event)" oninput="adjustHeight(this)"></textarea>
+          <div class="input-actions">
+            <input type="file" id="fileInput" style="display:none" onchange="onFileSelected(event)" />
+            <button class="input-btn" title="Attach file" onclick="document.getElementById('fileInput').click()">
+              <i class="fa-solid fa-paperclip"></i>
+            </button>
+            <button class="input-btn send-btn" onclick="sendMessage()" title="Send message">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <script src="chat.js"></script>
+</body>
+
+</html>
