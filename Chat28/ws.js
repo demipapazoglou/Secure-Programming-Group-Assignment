@@ -5,7 +5,6 @@
  * Course: COMP SCI 3307
  * Assignment: Advanced Secure Protocol Design, Implementation and Review
  *
- * 
  * SOCP v1.3 Compliance:
  * - E2EE using RSA-4096, RSA-OAEP (SHA-256), RSASSA-PSS (SHA-256)
  * - MSG_DIRECT for encrypted messages (server cannot decrypt)
@@ -124,6 +123,18 @@ function initialiseWebSocket(server) {
             handleRoomMessage(username, message);
             break;
 
+          case 'FILE_START':
+            handleFileStart(username, message);
+            break;
+
+          case 'FILE_CHUNK':
+            handleFileChunk(username, message);
+            break;
+
+          case 'FILE_END':
+            handleFileEnd(username, message);
+            break;
+
           case 'FILE_OFFER':
             handleFileOffer(username, message);
             break;
@@ -183,20 +194,33 @@ function initialiseWebSocket(server) {
   console.log('WebSocket server initialized with SOCP v1.3 support');
 }
 
-// Public message broadcast
+// Public message broadcast with loop prevention
 function handlePublicMessage(username, message) {
+  const { content } = message;
+  const timestamp = Date.now();
+  
+  // SOCP Loop Prevention: Use content + sender + time window (1 second)
+  const timeWindow = Math.floor(timestamp / 1000);
+  const msgId = `public:${username}:${content.substring(0, 100)}:${timeWindow}`;
+  
+  if (seenMessages.has(msgId)) {
+    console.log(`[LOOP PREVENTED] Duplicate public message from ${username}`);
+    return;
+  }
+  addToSeenCache(msgId);
+
   const msg = {
     type: 'MSG_PUBLIC',
     from: username,
-    content: message.content,
-    timestamp: Date.now()
+    content: content,
+    timestamp: timestamp
   };
 
   broadcast(msg);
-  console.log(`[PUBLIC] ${username}: ${message.content}`);
+  console.log(`[PUBLIC] ${username}: ${content}`);
 }
 
-// Direct encrypted message - SOCP MSG_DIRECT
+// Direct encrypted message - SOCP MSG_DIRECT with loop prevention
 async function handleDirectMessage(username, message) {
   const { to, ciphertext, sender_pub, content_sig } = message;
 
@@ -205,12 +229,13 @@ async function handleDirectMessage(username, message) {
     return;
   }
 
-  // Generate message ID for loop prevention
-  const msgId = `${username}-${to}-${Date.now()}-${Math.random()}`;
+  // SOCP Loop Prevention: Use content_sig as unique identifier
+  // Content signature includes ciphertext + from + to + timestamp, so it's unique per message
+  const msgId = `direct:${username}:${to}:${content_sig}`;
 
   // Check if we've seen this message before
   if (seenMessages.has(msgId)) {
-    console.log(`[LOOP PREVENTED] Duplicate message ${msgId}`);
+    console.log(`[LOOP PREVENTED] Duplicate MSG_DIRECT from ${username} to ${to}`);
     return;
   }
   addToSeenCache(msgId);
@@ -249,6 +274,81 @@ async function handleDirectMessage(username, message) {
         to: to
       }));
     }
+  }
+}
+
+// File transfer handlers with loop prevention
+function handleFileStart(username, message) {
+  const { to, payload } = message;
+  const { file_id } = payload;
+
+  // Loop prevention for file transfers
+  const msgId = `file_start:${username}:${to}:${file_id}`;
+  if (seenMessages.has(msgId)) {
+    console.log(`[LOOP PREVENTED] Duplicate FILE_START from ${username}`);
+    return;
+  }
+  addToSeenCache(msgId);
+
+  const recipientWs = clients.get(to);
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'FILE_START',
+      from: username,
+      to: to,
+      ts: Date.now(),
+      payload: payload
+    }));
+    console.log(`[FILE] Transfer started: ${username} -> ${to}`);
+  }
+}
+
+function handleFileChunk(username, message) {
+  const { to, payload } = message;
+  const { file_id, index } = payload;
+
+  // Loop prevention for chunks
+  const msgId = `file_chunk:${file_id}:${index}`;
+  if (seenMessages.has(msgId)) {
+    console.log(`[LOOP PREVENTED] Duplicate FILE_CHUNK ${index} for ${file_id}`);
+    return;
+  }
+  addToSeenCache(msgId);
+
+  const recipientWs = clients.get(to);
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'FILE_CHUNK',
+      from: username,
+      to: to,
+      ts: Date.now(),
+      payload: payload
+    }));
+  }
+}
+
+function handleFileEnd(username, message) {
+  const { to, payload } = message;
+  const { file_id } = payload;
+
+  // Loop prevention for file end
+  const msgId = `file_end:${file_id}`;
+  if (seenMessages.has(msgId)) {
+    console.log(`[LOOP PREVENTED] Duplicate FILE_END for ${file_id}`);
+    return;
+  }
+  addToSeenCache(msgId);
+
+  const recipientWs = clients.get(to);
+  if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+    recipientWs.send(JSON.stringify({
+      type: 'FILE_END',
+      from: username,
+      to: to,
+      ts: Date.now(),
+      payload: payload
+    }));
+    console.log(`[FILE] Transfer completed: ${file_id}`);
   }
 }
 
