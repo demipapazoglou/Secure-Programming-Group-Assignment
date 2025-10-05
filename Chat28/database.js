@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  privkey_store: {
+    type: String,
+    required: true,  // Encrypted private key blob
+  },
   bio: {
     type: String,
     default: "",
