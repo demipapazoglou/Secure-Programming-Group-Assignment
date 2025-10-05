@@ -88,18 +88,10 @@ Preferred Device: Laptop/Desktop for full screen functionality
    Visit http://localhost:3000
 
 ===============================================================================
-PROGRAM USAGE
-===============================================================================
-
-Run the crypto test:
-node test-crypto.js
-
-===============================================================================
 FILES INCLUDED
 ===============================================================================
 
 - crypto/CryptoManager.js - Handles encryption, decryption, and key management
-- test-crypto.js - Test file for verifying the functionality of CryptoManager.js and MessageSigner.js
 
 ===============================================================================
 CONTRIBUTIONS
