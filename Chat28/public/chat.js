@@ -90,22 +90,77 @@ class CryptoHelper {
 }
 
 // ========== INITIALISATION ==========
+// document.addEventListener('DOMContentLoaded', async () => {
+//     console.log('[INIT] Starting Chat28...');
+
+//     const params = new URLSearchParams(window.location.search);
+//     const u = params.get('u') || localStorage.getItem('activeUser');
+
+//     if (!u) {
+//         window.location.href = '/login.html';
+//         return;
+//     }
+//     currentUsername = u;
+
+//     // pull per-user values
+//     const token = localStorage.getItem(`token_${u}`);
+//     currentUserPublicKey = localStorage.getItem(`publicKey_${u}`);
+//     currentUserPrivateKey = localStorage.getItem(`privateKey_${u}`);
+
+//     if (!token || !currentUserPublicKey) {
+//         alert('Missing credentials. Please login again.');
+//         logout();
+//         return;
+//     }
+
+//     // keep token in a variable for the WS auth step
+//     window.__tokenForWS = token;
+
+
+//     currentUsername = localStorage.getItem('username');
+//     currentUserPublicKey = localStorage.getItem('publicKey');
+//     currentUserPrivateKey = localStorage.getItem(`privateKey_${currentUsername}`);
+
+//     if (!currentUsername || !currentUserPublicKey) {
+//         alert('Missing credentials. Please login again.');
+//         logout();
+//         return;
+//     }
+
+//     if (!currentUserPrivateKey) {
+//         console.warn('[INIT] No private key - cannot decrypt messages');
+//     }
+
+//     console.log('[INIT] Logged in as:', currentUsername);
+
+//     // Update UI
+//     updateConnectionStatus('connecting');
+
+//     // Connect WebSocket
+//     connectWebSocket();
+// });
+// ========== INITIALISATION ==========
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[INIT] Starting Chat28...');
 
     const params = new URLSearchParams(window.location.search);
-    const u = params.get('u') || localStorage.getItem('activeUser');
-
-    if (!u) {
+    const usernameFromUrl = params.get('u');
+    
+    if (!usernameFromUrl) {
         window.location.href = '/login.html';
         return;
     }
-    currentUsername = u;
 
-    // pull per-user values
-    const token = localStorage.getItem(`token_${u}`);
-    currentUserPublicKey = localStorage.getItem(`publicKey_${u}`);
-    currentUserPrivateKey = localStorage.getItem(`privateKey_${u}`);
+    currentUsername = usernameFromUrl;
+
+    // Get credentials for this specific user
+    const token = localStorage.getItem(`token_${currentUsername}`);
+    currentUserPublicKey = localStorage.getItem(`publicKey_${currentUsername}`);
+    currentUserPrivateKey = localStorage.getItem(`privateKey_${currentUsername}`);
+
+    console.log('[INIT] Token exists:', !!token);
+    console.log('[INIT] Public key exists:', !!currentUserPublicKey);
+    console.log('[INIT] Private key exists:', !!currentUserPrivateKey);
 
     if (!token || !currentUserPublicKey) {
         alert('Missing credentials. Please login again.');
@@ -113,23 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // keep token in a variable for the WS auth step
+    // Store token for WebSocket auth
     window.__tokenForWS = token;
-
-
-    currentUsername = localStorage.getItem('username');
-    currentUserPublicKey = localStorage.getItem('publicKey');
-    currentUserPrivateKey = localStorage.getItem(`privateKey_${currentUsername}`);
-
-    if (!currentUsername || !currentUserPublicKey) {
-        alert('Missing credentials. Please login again.');
-        logout();
-        return;
-    }
-
-    if (!currentUserPrivateKey) {
-        console.warn('[INIT] No private key - cannot decrypt messages');
-    }
 
     console.log('[INIT] Logged in as:', currentUsername);
 
@@ -139,7 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Connect WebSocket
     connectWebSocket();
 });
-
 // ========== WEBSOCKET CONNECTION ==========
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -279,18 +318,33 @@ function sendMessage() {
     input.value = '';
 }
 
+// function sendPublicMessage(text) {
+//     if (!ws || ws.readyState !== WebSocket.OPEN) {
+//         displaySystemMessage('Not connected', 'error');
+//         return;
+//     }
+
+//     ws.send(JSON.stringify({
+//         type: 'MSG_PUBLIC',
+//         content: text
+//     }));
+
+//     displayPublicMessage(currentUsername, text, Date.now());
+// }
+
 function sendPublicMessage(text) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         displaySystemMessage('Not connected', 'error');
         return;
     }
 
+    // Don't display immediately - wait for server broadcast
+    // Remove this line: displayPublicMessage(currentUsername, text, Date.now());
+
     ws.send(JSON.stringify({
         type: 'MSG_PUBLIC',
         content: text
     }));
-
-    displayPublicMessage(currentUsername, text, Date.now());
 }
 
 async function sendPrivateMessage(text) {
