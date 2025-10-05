@@ -16,6 +16,7 @@ TABLE OF CONTENTS
 - Installation and Setup
 - Program Usage
 - Files Included
+- Automated Testing (Semgrep)
 - Contributions
 - Acknowledgements
 
@@ -96,29 +97,26 @@ Preferred Device: Laptop/Desktop for full UI functionality
 PROGRAM USAGE EXAMPLES
 ===============================================================================
 
-User Registration and Login:
-1. Navigate to http://localhost:3000 in a browser
-2. Create a new account
-3. Login using your credentials
-
-Sending a private message:
-1. Select a user from the contacts list
-2. Enter a message; it will be encrypted with the recipient's public key
-
-Sending a group message:
-1. Select "Public chat" and send your message
-- All connected users will receive the broadcast
-
-Run the crypto test: node test-crypto.js
-
 ===============================================================================
 FILES INCLUDED
 ===============================================================================
 
 - crypto/CryptoManager.js - Handles encryption, decryption, and key management
-- test-crypto.js - Test file for verifying the functionality of CryptoManager.js and MessageSigner.js
-- frontend/public/ - Frontend files (eg. HTML, CSS)
-- /server.js - Main backend server entry points
+
+===============================================================================
+AUTOMATED TESTING (Semgrep)
+===============================================================================
+We used Semgrep for automated static analysis to detect potential security vulnerabilities and code quality issues.
+
+1. Installation
+brew install semgrep
+# or
+npm install -g semgrep
+
+2. Run the scan 
+semgrep scan --config auto .
+
+Semgrep automatically analyses all project folders and reports any security or style issues in the console.
 
 ===============================================================================
 CONTRIBUTIONS

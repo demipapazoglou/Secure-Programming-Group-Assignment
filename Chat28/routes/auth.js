@@ -66,12 +66,52 @@ router.post("/register", async (req, res) => {
 });
 
 // LOGIN
+// router.post("/login", async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+
+//     const user = await User.findOne({ username });
+//     if (!user) return res.status(400).json({ error: "Invalid credentials" });
+
+//     const valid = await bcrypt.compare(password, user.password);
+//     if (!valid) return res.status(400).json({ error: "Invalid credentials" });
+
+//     const token = jwt.sign(
+//       { user_id: user.user_id, username: user.username },
+//       process.env.JWT_SECRET || "your-secret-key",
+//       { expiresIn: "2h" }
+//     );
+
+//     res.json({
+//       user_id: user.user_id,
+//       username: user.username,
+//       token,
+//       publicKey: user.publicKey,
+//       fingerprint: user.fingerprint,
+//     });
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     res.status(500).json({ error: "Login failed: " + err.message });
+//   }
+// });
+
+// LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+
     const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ error: "Invalid credentials" });
+
+    // Validate password hash exists
+    if (!user.password) {
+      return res.status(400).json({ error: "Invalid user account" });
+    }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: "Invalid credentials" });
