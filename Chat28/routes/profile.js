@@ -40,14 +40,18 @@ router.get('/me', authenticateToken, async (req, res) => {
     const user = await User.findOne({ username }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    return res.json({
+    const data = {
       user_id: user.user_id,
       username: user.username,
       bio: user.bio,
       publicKey: user.publicKey,
       fingerprint: user.fingerprint,
       createdAt: user.createdAt
-    });
+    };
+
+    console.log('Returning /profile/me data:', data);
+
+    return res.json(data);
   } catch (err) {
     console.error('Error in /profile/me:', err);
     return res.status(500).json({ error: 'Server error' });

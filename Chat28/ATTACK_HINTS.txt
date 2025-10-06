@@ -12,8 +12,9 @@ VULN: IDOR (Broken Access Control)
 
 Instructions:
 - Enable VULN_MODE=true in your local .env for testing (only run locally).
-- Use the provided test accounts (create via /api/auth/register).
-- Do not brute force, scan or deploy the vulnerable service publicly.
+- Install jq: `sudo apt update && sudo apt install -y jq`
+- In one terminal, start the server, and in another terminal, run `chmod +x test-idor.sh` and `./test-idor.sh`.
+- You will get the user IDs in the terminal. 
 
 
 VULN: Stored XSS
