@@ -24,6 +24,8 @@ const authRouter = require("./routes/auth");
 // Import WebSocket initialiser
 const { initialiseWebSocket } = require("./ws");
 
+const { parseBootstrapServers, connectToIntroducer } = require("./introducer");
+
 const app = express();
 
 // ---------- VIEWS ----------
@@ -73,6 +75,10 @@ async function startServer() {
 
     // INITIALIZE WEBSOCKET
     initialiseWebSocket(server);
+
+	// INTRODUCE SELF TO INTRODUCER SERVER
+	parseBootstrapServers();
+	connectToIntroducer();
 
   } catch (error) {
     console.error("Failed to start server:", error);
