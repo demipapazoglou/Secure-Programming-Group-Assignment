@@ -1,128 +1,253 @@
-Group Repository for COMP SCI 3307 Secure Programming Secure Chat Application Project (2025 Semester 2)
+--------------------------------------------------------------------------------
+CHAT28 README
+--------------------------------------------------------------------------------
+Group 28 UG: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | 
+             Amber Yaa Wen Chew | Grace Baek
+Course: COMP SCI 3307 - Secure Programming
+Repository: https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
+--------------------------------------------------------------------------------
 
-Group 28 UG: Samira Hazara | Demi Papazoglou | Caitlin Joyce Martyr | Amber Yaa Wen Chew | Grace Baek 
+IMPORTANT NOTE
 
-===============================================================================
+This submission contains INTENTIONAL VULNERABILITIES for peer review purposes. 
+The vulnerabilities are clearly labeled with comments in the source code but are left for other groups to discover.
+
+If you're having difficulty finding them, check the hints section at the end
+of this document (Section 6).
+
+--------------------------------------------------------------------------------
 TABLE OF CONTENTS
-===============================================================================
-- Project Description
-- Features
-- Technologies Used
-- Installation and Setup
-- Program Usage
-- Files Included
-- Automated Testing (Semgrep)
-- Contributions
-- Acknowledgements
+--------------------------------------------------------------------------------
+1. System Requirements
+2. Quick Start Guide
+3. Dependencies
+4. Usage Examples
+5. Troubleshooting
+6. Vulnerability Discovery Hints
+7. Contact Information
 
-===============================================================================
-PROJECT DESCRIPTION
-===============================================================================
+--------------------------------------------------------------------------------
+1. SYSTEM REQUIREMENTS
+--------------------------------------------------------------------------------
 
-Chat28 is a secure, real-time public chat platform that supports both one-to-one and group (public announcement style) messaging. Designed with a primary focus on security and privacy, Chat28 provides an application where users can communicate with confidence.
+Required:
+- Node.js v18.0.0 or higher
+- npm (Node Package Manager)
+- Modern web browser (Chrome, Firefox, or Edge)
+- MongoDB (credentials provided below)
 
-===============================================================================
-FEATURES
-===============================================================================
+--------------------------------------------------------------------------------
+2. QUICK START GUIDE
+--------------------------------------------------------------------------------
 
-- One-to-one private messaging
-- Group chat support
-- End-to-end encryption
-- Authentication and authorisation
-- Real-time communication
+Step 1: Clone and Navigate to Project Directory
+------------------------------------------------
+git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
+cd Secure-Programming-Group-Assignment
+cd Chat28
+npm install
 
-===============================================================================
-TECHNOLOGIES USED
-===============================================================================
+Step 2: Create .env File Inside Chat28 Directory
+-------------------------------------------------
+IMPORTANT: Create the .env file inside the Chat28 folder (not the root folder).
 
-Backend:
-- Runtime: Node.js
-- Framework: Express.js
-- Real-time Communication: WebSocket
-- Encryption: RSA
-- Database: MongoDB
+Create a file named ".env" inside the Chat28 directory with this content:
 
-Frontend:
-- Markup: HTML
+MONGODB_URI=mongodb+srv://28_admin:UzSNxWdBjBjtohWi@28test.fphel12.mongodb.net/?retryWrites=true&w=majority&appName=28Test
+MONGO_DB=28test
+JWT_SECRET=super-secure-jwt-secret-key-at-least-32-characters-long
+PORT=3000
+NODE_ENV=development
+VULN_MODE=true
 
-Security & Authentication:
-- Password Hashing: bcryptjs
-- Token Generation: crypto (for secure operations)
-- XSS Protection: xss-clean (basic XSS middleware for sanitising requests)
-- Authentication: Session-based Authentication (Express Session)
+Note: VULN_MODE=true enables the intentional vulnerabilities for testing.
 
-===============================================================================
-INSTALLATION AND SETUP
-===============================================================================
+Step 3: Run the Server
+----------------------
+Make sure you are in the Chat28 directory, then run:
 
-Recommended Browser: Google Chrome  
-Preferred Device: Laptop/Desktop for full screen functionality
+npm start
 
-1. Clone the Repository 
-   git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
+Expected console output:
+  MongoDB connected
+  WebSocket server initialized with SOCP v1.3 support
+  Server running at http://localhost:3000
 
-2. Navigate to the Root Directory 
-   cd Chat28
+Step 4: Access the Application
+-------------------------------
+Open your browser and navigate to: http://localhost:3000
 
-3. Install Dependencies 
-   npm install
+For development mode with auto-restart:
+  npm run dev
 
-4. Set up Environment Variables
-   Create a .env file in the server directory and add the following configuration:
+--------------------------------------------------------------------------------
+3. DEPENDENCIES
+--------------------------------------------------------------------------------
 
-   # MongoDB Configuration
-   MONGODB_URI=mongodb+srv://28_admin:UzSNxWdBjBjtohWi@28test.fphel12.mongodb.net/?retryWrites=true&w=majority&appName=28Test
-   MONGO_DB=28test
+Core Packages:
+- express (4.18.2) - Web framework
+- ws (8.18.3) - WebSocket implementation
+- mongoose (8.0.3) - MongoDB ODM
 
-   # JWT Configuration
-   JWT_SECRET=super-secure-jwt-secret-key-at-least-32-characters-long-for-production-use
-   JWT_COOKIE_NAME=chat28_token
-   JWT_ISSUER=chat28
+Security Packages:
+- bcrypt (5.1.1) - Password hashing
+- jsonwebtoken (9.0.2) - JWT authentication
+- crypto (built-in Node.js) - RSA-4096 encryption/signing
 
-   # Server Settings 
-   PORT=3000
-   NODE_ENV=development
+Additional Packages:
+- dotenv (16.3.1) - Environment configuration
+- cors (2.8.5) - CORS handling
+- helmet (7.1.0) - Security headers
+- morgan (1.10.0) - HTTP request logging
 
-5. Start the Server 
-   npm start
+Install all dependencies with:
+  npm install
 
-   Visit http://localhost:3000
+--------------------------------------------------------------------------------
+4. USAGE EXAMPLES
+--------------------------------------------------------------------------------
 
-===============================================================================
-PROGRAM USAGE
-===============================================================================
+Example 1: Register Two Users
+------------------------------
+1. Open http://localhost:3000 in your browser
+2. Click "Create an account"
+3. Register first user:
+   Username: alice
+   Password: Alice123!
+4. Wait 5-10 seconds for RSA-4096 key generation
+5. Open a new incognito/private browser window
+6. Register second user:
+   Username: bob
+   Password: Bob123!
 
-===============================================================================
-FILES INCLUDED
-===============================================================================
+Example 2: Send Public Message
+-------------------------------
+1. As alice, ensure "Public" button is selected (default)
+2. Type in the message box: Hello everyone!
+3. Press Enter or click the send button
+4. Bob will see the message appear in real-time
 
-- crypto/CryptoManager.js - Handles encryption, decryption, and key management
+Example 3: Send Encrypted Private Message
+------------------------------------------
+1. As alice, click the "Private" button
+2. Select "bob" from the recipient dropdown
+3. Type: This is a secret message
+4. Press Enter or click send
+5. The message is encrypted with RSA-4096 using bob's public key
+6. Only bob can decrypt it with his private key
+7. Open browser console (F12) to see [E2EE] encryption logs
 
-===============================================================================
-AUTOMATED TESTING (Semgrep)
-===============================================================================
-We used Semgrep for automated static analysis to detect potential security vulnerabilities and code quality issues.
+Example 4: Use Chat Commands
+-----------------------------
+Type these commands in the chat input:
 
-1. Installation
-   brew install semgrep
-   # or
-   npm install -g semgrep
+/list                       Lists all online users (alphabetically sorted)
+/tell bob Hello there       Sends encrypted direct message to bob
+/all Broadcast message      Sends message to public channel
+/file bob                   Opens file upload dialog to send encrypted file
 
-2. Run the scan 
-   semgrep scan --config auto .
+Example 5: Test File Transfer
+------------------------------
+1. Click "Private" mode
+2. Select a recipient from the dropdown
+3. Click the paperclip icon
+4. Choose a file (recommended: under 5MB for testing)
+5. File is encrypted in chunks using RSA-4096
+6. Recipient receives and automatically decrypts the file
 
-Semgrep automatically analyses all project folders and reports any security or style issues in the console.
+--------------------------------------------------------------------------------
+5. TROUBLESHOOTING
+--------------------------------------------------------------------------------
 
-===============================================================================
-CONTRIBUTIONS
-===============================================================================
+Problem: "Cannot find module 'xyz'"
+Solution: Run npm install in the Chat28 directory
 
-Pull requests, suggestions, and bug reports are welcome. For significant contributions, please open an issue first to discuss the changes.
+Problem: "MONGODB_URI is not set"
+Solution: Ensure .env file exists inside Chat28 directory (not root)
+          Check that all variables are correctly copied
 
-===============================================================================
-ACKNOWLEDGEMENTS
-===============================================================================
+Problem: "Port 3000 already in use"
+Solution: Change PORT in .env to 3001
+          Or kill the process using the port:
+          Mac/Linux: lsof -ti:3000 | xargs kill -9
+          Windows: netstat -ano | findstr :3000
+                   Then: taskkill /PID <pid> /F
 
-This project was developed solely for academic purposes and is not intended for production or commercial deployment.
+Problem: "WebSocket connection fails"
+Solution: Verify server is running (npm start)
+          Check that no firewall is blocking port 3000
+          Look at browser console for connection errors
 
-Some parts of this project were assisted by AI tools for documentation and debugging support. All outputs were reviewed and checked by the team.
+Problem: Messages not appearing
+Solution: Check browser console for WebSocket errors
+          Verify user is authenticated (token in localStorage)
+          Ensure recipient is online for private messages
+
+--------------------------------------------------------------------------------
+6. VULNERABILITY DISCOVERY HINTS
+--------------------------------------------------------------------------------
+
+REMINDER: This code contains intentional vulnerabilities for peer review.
+The vulnerabilities are labeled with comments in the source code.
+
+If you're having trouble discovering them, here are some hints:
+
+Hint 1: Access Control Issues
+------------------------------
+Look for endpoints that accept user identifiers as parameters.
+Are there proper authorization checks?
+Can one user access another user's private data?
+
+Files to examine:
+- routes/profile.js (check all GET endpoints)
+- Look for endpoints that use query parameters
+
+Environment configuration:
+- Some vulnerabilities only activate when VULN_MODE=true in .env
+
+Hint 2: Input Sanitisation Problems
+------------------------------------
+Examine how user-generated content is displayed in the browser.
+Is all content properly escaped before rendering?
+
+Files to examine:
+- public/chat.js (check message display functions)
+- Look for innerHTML usage
+- Check if escapeHtml() function exists - is it used consistently?
+
+Testing approach:
+- Try sending HTML tags in chat messages
+- Try sending JavaScript code in messages
+- Observe what happens in the browser
+
+Remember: The vulnerabilities are clearly marked with comments once you find
+them. They demonstrate understanding of common security weaknesses and are
+intentional for educational purposes.
+
+--------------------------------------------------------------------------------
+7. CONTACT INFORMATION
+--------------------------------------------------------------------------------
+
+If you have any trouble running the Chat28 application or questions about our
+implementation, please feel free to contact us through our university emails!
+
+Samira Hazara: samira.hazara@student.adelaide.edu.au
+Demi Papazoglou: demi.papazoglou@student.adelaide.edu.au
+Caitlin Joyce Martyr: caitlinjoyce.martyr@student.adelaide.edu.au
+Amber Yaa Wen Chew: amberyaawen.chew@student.adelaide.edu.au
+Grace Baek: grace.baek@student.adelaide.edu.au
+
+We're happy to help with any issues such as: 
+
+- Installation and configuration issues
+- Protocol compatibility questions
+- Interoperability testing
+- General usage guidance
+
+GitHub: https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
+
+Thank you for testing our implementation! We look forward to your feedback!
+
+Kind regards,
+
+UG Group 28 
