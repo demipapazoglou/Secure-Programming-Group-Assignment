@@ -449,7 +449,7 @@ function displayPublicMessage(from, content, timestamp) {
                 <span class="message-sender">${escapeHtml(from)}</span>
                 <span>Public</span>
             </div>
-            <div class="text">${escapeHtml(content)}</div>
+            <div class="text">${content}</div>
             <div class="message-time">${time}</div>
         </div>
     `;
@@ -472,7 +472,7 @@ function displayPrivateMessage(user, content, isSent) {
                 <span class="message-sender">🔒 ${label}</span>
                 <span>Private (E2EE)</span>
             </div>
-            <div class="text">${escapeHtml(content)}</div>
+            <div class="text">${content}</div>
             <div class="message-time">${time}</div>
         </div>
     `;

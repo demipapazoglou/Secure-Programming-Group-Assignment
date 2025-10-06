@@ -62,7 +62,7 @@ Preferred Device: Laptop/Desktop for full screen functionality
    git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
 
 2. Navigate to the Root Directory 
-   cd secure-chat/server
+   cd Chat28
 
 3. Install Dependencies 
    npm install
