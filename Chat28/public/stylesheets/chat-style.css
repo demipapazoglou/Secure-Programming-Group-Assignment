@@ -150,13 +150,26 @@
   }
   
   .user-item {
-    padding: 16px;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
     margin-bottom: 8px;
     border-radius: 12px;
     cursor: pointer;
     color: var(--text-light);
-    display: flex; justify-content: space-between; align-items: center;
     transition: all 0.3s ease;
+    /* Remove justify-content: space-between */
+  }
+  
+  .user-item:hover { 
+    transform: translateX(5px); 
+    background: rgba(255, 255, 255, 0.1);
+  }
+    
+  .user-name {
+    color: var(--text-light);
+    font-weight: 500;
+    font-size: 15px;
   }
   .user-item:hover { transform: translateX(5px) scale(1.02); }
   
@@ -244,5 +257,13 @@
     .navbar { width: 100%; position: absolute; transform: translateX(-100%); }
     .navbar.open { transform: translateX(0); }
     .main-chat { margin: 0; border-radius: 0; }
+  }
+  
+  .clickable {
+    cursor: pointer;
+    color: #f9f9f9;
+  }
+  .clickable:hover {
+    text-decoration: underline;
   }
   

@@ -90,62 +90,12 @@ class CryptoHelper {
 }
 
 // ========== INITIALISATION ==========
-// document.addEventListener('DOMContentLoaded', async () => {
-//     console.log('[INIT] Starting Chat28...');
-
-//     const params = new URLSearchParams(window.location.search);
-//     const u = params.get('u') || localStorage.getItem('activeUser');
-
-//     if (!u) {
-//         window.location.href = '/login.html';
-//         return;
-//     }
-//     currentUsername = u;
-
-//     // pull per-user values
-//     const token = localStorage.getItem(`token_${u}`);
-//     currentUserPublicKey = localStorage.getItem(`publicKey_${u}`);
-//     currentUserPrivateKey = localStorage.getItem(`privateKey_${u}`);
-
-//     if (!token || !currentUserPublicKey) {
-//         alert('Missing credentials. Please login again.');
-//         logout();
-//         return;
-//     }
-
-//     // keep token in a variable for the WS auth step
-//     window.__tokenForWS = token;
-
-
-//     currentUsername = localStorage.getItem('username');
-//     currentUserPublicKey = localStorage.getItem('publicKey');
-//     currentUserPrivateKey = localStorage.getItem(`privateKey_${currentUsername}`);
-
-//     if (!currentUsername || !currentUserPublicKey) {
-//         alert('Missing credentials. Please login again.');
-//         logout();
-//         return;
-//     }
-
-//     if (!currentUserPrivateKey) {
-//         console.warn('[INIT] No private key - cannot decrypt messages');
-//     }
-
-//     console.log('[INIT] Logged in as:', currentUsername);
-
-//     // Update UI
-//     updateConnectionStatus('connecting');
-
-//     // Connect WebSocket
-//     connectWebSocket();
-// });
-// ========== INITIALISATION ==========
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[INIT] Starting Chat28...');
 
     const params = new URLSearchParams(window.location.search);
     const usernameFromUrl = params.get('u');
-    
+
     if (!usernameFromUrl) {
         window.location.href = '/login.html';
         return;
@@ -236,7 +186,7 @@ function handleMessage(message) {
         case 'USER_DELIVER':
             handleEncryptedMessage(message);
             break;
-        
+
         // for file transfer:
         case 'FILE_START':
         case 'FILE_CHUNK':
@@ -246,7 +196,11 @@ function handleMessage(message) {
 
         case 'ONLINE_USERS':
             updateOnlineUsers(message.users);
+            displaySystemMessage(
+                `👥 Online Users (${message.users.length}):\n${message.users.map(u => '• ' + u).join('\n')}`
+              );
             break;
+
 
         case 'USER_KEY':
             publicKeysCache.set(message.username, message.publicKey);
@@ -390,8 +344,14 @@ async function handleCommand(text) {
 
     switch (command) {
         case '/list':
-            requestOnlineUsers();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'GET_ONLINE_USERS' }));
+                displaySystemMessage('Requesting list of online users...');
+            } else {
+                displaySystemMessage('Not connected to server.', 'error');
+            }
             break;
+
 
         case '/tell':
             if (parts.length < 3) {
@@ -460,7 +420,7 @@ function displayPublicMessage(from, content, timestamp) {
             <div class="message-time">${time}</div>
         </div>
     `;
-
+    // VULN HERE
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
@@ -483,6 +443,7 @@ function displayPrivateMessage(user, content, isSent) {
             <div class="message-time">${time}</div>
         </div>
     `;
+    // VULN HERE
 
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -514,7 +475,6 @@ function updateOnlineUsers(users) {
             userDiv.innerHTML = `
                 <div class="user-avatar"></div>
                 <span class="user-name">${escapeHtml(user)}</span>
-                <button class="dm-btn" onclick="startPrivateChat('${user}')">DM</button>
             `;
             container.appendChild(userDiv);
 
@@ -678,7 +638,7 @@ async function sendFile(file, recipient) {
     }
 
     const fileId = `${currentUsername}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Calculate file hash
     const fileBuffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
@@ -712,16 +672,16 @@ async function sendFile(file, recipient) {
     while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
-        
+
         if (value) {
             // Convert chunk to base64 for RSA encryption
             const chunkArray = new Uint8Array(value);
             const chunkBase64 = arrayBufferToBase64(chunkArray);
-            
+
             try {
                 // Encrypt chunk with recipient's public key
                 const encryptedChunk = await CryptoHelper.encrypt(chunkBase64, recipientKey);
-                
+
                 // Send FILE_CHUNK with encrypted data
                 ws.send(JSON.stringify({
                     type: 'FILE_CHUNK',
@@ -737,12 +697,12 @@ async function sendFile(file, recipient) {
 
                 chunkIndex++;
                 bytesProcessed += value.length;
-                
+
                 // Update progress
                 const percent = Math.floor((bytesProcessed / file.size) * 100);
-                document.getElementById('fileTransferStatus').textContent = 
-                    `Encrypting ${file.name} — ${percent}% (${Math.round(bytesProcessed/1024)}/${Math.round(file.size/1024)} KB)`;
-                    
+                document.getElementById('fileTransferStatus').textContent =
+                    `Encrypting ${file.name} — ${percent}% (${Math.round(bytesProcessed / 1024)}/${Math.round(file.size / 1024)} KB)`;
+
             } catch (error) {
                 console.error('Chunk encryption failed:', error);
                 throw new Error('File encryption failed');
@@ -766,11 +726,11 @@ async function sendFile(file, recipient) {
 // Handle incoming encrypted file transfers
 async function handleEncryptedFileMessage(message) {
     const { type, from, payload, ts } = message;
-    
+
     switch (type) {
         case 'FILE_START': {
             const { file_id, name, size, sha256, mode } = payload;
-            
+
             // Store file metadata for receiving
             if (!receivingInProgress[file_id]) {
                 receivingInProgress[file_id] = {
@@ -782,7 +742,7 @@ async function handleEncryptedFileMessage(message) {
                     receivedCount: 0,
                     totalChunks: Math.ceil(size / (64 * 1024))
                 };
-                
+
                 displaySystemMessage(`Receiving encrypted file "${name}" from ${from}`, 'info');
                 document.getElementById('fileTransferStatus').textContent = `Receiving ${name} — 0%`;
             }
@@ -792,7 +752,7 @@ async function handleEncryptedFileMessage(message) {
         case 'FILE_CHUNK': {
             const { file_id, index, ciphertext } = payload;
             const state = receivingInProgress[file_id];
-            
+
             if (!state) {
                 console.warn('Received chunk for unknown file:', file_id);
                 return;
@@ -803,19 +763,19 @@ async function handleEncryptedFileMessage(message) {
                 if (!currentUserPrivateKey) {
                     throw new Error('No private key available for decryption');
                 }
-                
+
                 const decryptedBase64 = await CryptoHelper.decrypt(ciphertext, currentUserPrivateKey);
                 const decryptedChunk = base64ToUint8Array(decryptedBase64);
-                
+
                 // Store decrypted chunk
                 state.chunks[index] = decryptedChunk;
                 state.receivedCount++;
-                
+
                 // Update progress
                 const percent = Math.floor((state.receivedCount / state.totalChunks) * 100);
-                document.getElementById('fileTransferStatus').textContent = 
+                document.getElementById('fileTransferStatus').textContent =
                     `Receiving ${state.fileName} — ${percent}% (${state.receivedCount}/${state.totalChunks})`;
-                    
+
             } catch (error) {
                 console.error('File chunk decryption failed:', error);
                 displaySystemMessage(`Failed to decrypt file chunk from ${from}`, 'error');
@@ -826,7 +786,7 @@ async function handleEncryptedFileMessage(message) {
         case 'FILE_END': {
             const { file_id } = payload;
             const state = receivingInProgress[file_id];
-            
+
             if (!state) return;
 
             try {
@@ -834,7 +794,7 @@ async function handleEncryptedFileMessage(message) {
                 const totalSize = state.chunks.reduce((sum, chunk) => sum + chunk.length, 0);
                 const fileBuffer = new Uint8Array(totalSize);
                 let offset = 0;
-                
+
                 for (let i = 0; i < state.chunks.length; i++) {
                     if (state.chunks[i]) {
                         fileBuffer.set(state.chunks[i], offset);
@@ -845,7 +805,7 @@ async function handleEncryptedFileMessage(message) {
                 // Verify file hash
                 const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
                 const receivedHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-                
+
                 if (receivedHash !== state.fileHash) {
                     throw new Error('File integrity check failed - hashes do not match');
                 }
@@ -863,7 +823,7 @@ async function handleEncryptedFileMessage(message) {
 
                 displaySystemMessage(`Received and decrypted "${state.fileName}" from ${from}`, 'info');
                 document.getElementById('fileTransferStatus').textContent = '';
-                
+
             } catch (error) {
                 console.error('File reconstruction failed:', error);
                 displaySystemMessage(`Failed to reconstruct file: ${error.message}`, 'error');
@@ -896,4 +856,3 @@ function base64ToUint8Array(base64) {
     }
     return bytes;
 }
-
