@@ -318,28 +318,11 @@ function sendMessage() {
     input.value = '';
 }
 
-// function sendPublicMessage(text) {
-//     if (!ws || ws.readyState !== WebSocket.OPEN) {
-//         displaySystemMessage('Not connected', 'error');
-//         return;
-//     }
-
-//     ws.send(JSON.stringify({
-//         type: 'MSG_PUBLIC',
-//         content: text
-//     }));
-
-//     displayPublicMessage(currentUsername, text, Date.now());
-// }
-
 function sendPublicMessage(text) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         displaySystemMessage('Not connected', 'error');
         return;
     }
-
-    // Don't display immediately - wait for server broadcast
-    // Remove this line: displayPublicMessage(currentUsername, text, Date.now());
 
     ws.send(JSON.stringify({
         type: 'MSG_PUBLIC',
@@ -417,8 +400,6 @@ async function handleCommand(text) {
             }
             const recipient = parts[1];
             const message = parts.slice(2).join(' ');
-
-            // Set recipient and send
             document.getElementById('recipientSelect').value = recipient;
             await sendPrivateMessage(message);
             break;
@@ -431,10 +412,36 @@ async function handleCommand(text) {
             sendPublicMessage(parts.slice(1).join(' '));
             break;
 
+        case '/file':
+            if (parts.length < 3) {
+                displaySystemMessage('Usage: /file <username> <filepath>', 'error');
+                return;
+            }
+            const fileRecipient = parts[1];
+            const fakePath = parts.slice(2).join(' '); // file path argument (for CLI compatibility)
+
+            // Optional: Let user choose file manually in browser
+            displaySystemMessage(`SOCP /file command invoked → select file for ${fileRecipient}`, 'info');
+
+            // Trigger hidden file input programmatically
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    displaySystemMessage('File selection cancelled.', 'error');
+                    return;
+                }
+                await sendFile(file, fileRecipient);
+            };
+            fileInput.click();
+            break;
+
         default:
             displaySystemMessage('Unknown command: ' + command, 'error');
     }
 }
+
 
 // ========== UI FUNCTIONS ==========
 function displayPublicMessage(from, content, timestamp) {
@@ -614,273 +621,6 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
-
-// -------------------- FILE TRANSFER --------------------
-// const FILE_CHUNK_SIZE = 64 * 1024; // 64KB per chunk
-// let sendingInProgress = {}; // recipient -> transfer metadata
-// let receivingInProgress = {}; // transferId -> {chunks:[], meta}
-
-// // Called when user picks a file
-// async function onFileSelected(event) {
-//     const file = event.target.files[0];
-//     if (!file) return;
-
-//     // Ask which recipient (only for private file transfer)
-//     const recipientSelect = document.getElementById('recipientSelect');
-//     let recipient = recipientSelect.value;
-//     if (!recipient) {
-//         // if no recipient selected, try to prompt - we require a recipient for now
-//         recipient = prompt('Enter recipient username for the file (private transfer):');
-//         if (!recipient) {
-//             displaySystemMessage('File transfer cancelled: no recipient selected', 'error');
-//             return;
-//         }
-//     }
-
-//     // confirm
-//     if (!confirm(`Send "${file.name}" (${(file.size / 1024).toFixed(1)} KB) to ${recipient}?`)) {
-//         return;
-//     }
-
-//     try {
-//         await sendFile(file, recipient);
-//     } catch (err) {
-//         console.error('File send failed:', err);
-//         displaySystemMessage('File send failed: ' + err.message, 'error');
-//     } finally {
-//         // clear file input
-//         event.target.value = '';
-//     }
-// }
-
-// // Send file in chunks via WS using FILE_OFFER messages (wrapped by server routing)
-// async function sendFile(file, recipient) {
-//     if (!ws || ws.readyState !== WebSocket.OPEN) {
-//         throw new Error('Not connected');
-//     }
-
-//     // Generate a transfer ID
-//     const transferId = `${localStorage.getItem('username') || currentUsername}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-//     const meta = {
-//         transferId,
-//         fileName: file.name,
-//         fileSize: file.size,
-//         fileType: file.type || 'application/octet-stream',
-//         from: currentUsername,
-//         to: recipient,
-//         chunkCount: Math.ceil(file.size / FILE_CHUNK_SIZE)
-//     };
-
-//     sendingInProgress[transferId] = { meta, sentChunks: 0 };
-
-//     displaySystemMessage(`Starting file transfer "${meta.fileName}" → ${recipient}`, 'info');
-//     document.getElementById('fileTransferStatus').textContent = `Sending ${meta.fileName} to ${recipient} — 0%`;
-
-//     // Send an initial FILE_OFFER message with metadata (recipient will accept/reject)
-//     ws.send(JSON.stringify({
-//         type: 'FILE_OFFER',
-//         to: recipient,
-//         transferId,
-//         fileName: meta.fileName,
-//         fileSize: meta.fileSize,
-//         fileType: meta.fileType,
-//         chunkCount: meta.chunkCount
-//     }));
-
-//     // Wait for FILE_ANSWER from recipient (accept/reject). We'll rely on server routing;
-//     // a real app would use a proper ack mechanism; here we poll receiving state for a short time.
-//     // We'll set up a promise that resolves when recipient sends FILE_ANSWER with accept=true
-
-//     const answer = await waitForFileAnswer(transferId, 30000); // 30s timeout
-//     if (!answer || !answer.accept) {
-//         delete sendingInProgress[transferId];
-//         document.getElementById('fileTransferStatus').textContent = '';
-//         displaySystemMessage('File transfer declined or timed out', 'error');
-//         return;
-//     }
-
-//     // Start streaming chunks
-//     const reader = file.stream().getReader();
-//     let chunkIndex = 0;
-//     let done = false;
-
-//     while (!done) {
-//         const { value, done: readerDone } = await reader.read();
-//         done = readerDone;
-//         if (value && value.length) {
-//             // send chunk (base64)
-//             const chunkArray = new Uint8Array(value);
-//             const chunkBase64 = arrayBufferToBase64(chunkArray);
-//             ws.send(JSON.stringify({
-//                 type: 'FILE_CHUNK',
-//                 to: recipient,
-//                 transferId,
-//                 index: chunkIndex,
-//                 data: chunkBase64
-//             }));
-
-//             chunkIndex++;
-//             sendingInProgress[transferId].sentChunks = chunkIndex;
-
-//             // update UI
-//             const percent = Math.floor((chunkIndex / meta.chunkCount) * 100);
-//             document.getElementById('fileTransferStatus').textContent = `Sending ${meta.fileName} — ${percent}% (${chunkIndex}/${meta.chunkCount})`;
-//         }
-//     }
-
-//     // finished - send FILE_COMPLETE
-//     ws.send(JSON.stringify({
-//         type: 'FILE_COMPLETE',
-//         to: recipient,
-//         transferId
-//     }));
-
-//     document.getElementById('fileTransferStatus').textContent = '';
-//     displaySystemMessage(`File transfer "${meta.fileName}" sent to ${recipient}`, 'info');
-//     delete sendingInProgress[transferId];
-// }
-
-// // Helper: wait for FILE_ANSWER routed back to us
-// function waitForFileAnswer(transferId, timeoutMs = 15000) {
-//     return new Promise((resolve) => {
-//         const key = `file_answer_${transferId}`;
-//         let resolved = false;
-
-//         function handler(message) {
-//             if (message.type === 'FILE_ANSWER' && message.transferId === transferId) {
-//                 resolved = true;
-//                 ws.removeEventListener('message', wsMessageProxy);
-//                 resolve(message);
-//             }
-//         }
-
-//         // We'll add a small proxy to ws.onmessage by wrapping JSON parse - integrate with existing handler
-//         function wsMessageProxy(event) {
-//             try {
-//                 const m = JSON.parse(event.data);
-//                 handler(m);
-//             } catch (e) { }
-//         }
-
-//         ws.addEventListener('message', wsMessageProxy);
-
-//         setTimeout(() => {
-//             if (!resolved) {
-//                 ws.removeEventListener('message', wsMessageProxy);
-//                 resolve(null);
-//             }
-//         }, timeoutMs);
-//     });
-// }
-
-// // Convert Uint8Array to base64 (browser)
-// function arrayBufferToBase64(buffer) {
-//     // buffer is Uint8Array
-//     let binary = '';
-//     const bytes = buffer;
-//     const len = bytes.byteLength;
-//     for (let i = 0; i < len; i++) {
-//         binary += String.fromCharCode(bytes[i]);
-//     }
-//     return btoa(binary);
-// }
-
-// // Convert base64 to Uint8Array
-// function base64ToUint8Array(base64) {
-//     const binary = atob(base64);
-//     const len = binary.length;
-//     const bytes = new Uint8Array(len);
-//     for (let i = 0; i < len; i++) {
-//         bytes[i] = binary.charCodeAt(i);
-//     }
-//     return bytes;
-// }
-
-// // Handle incoming file messages 
-// async function handleFileMessage(message) {
-//     switch (message.type) {
-//         case 'FILE_OFFER': {
-//             // Someone wants to send a file to us
-//             const { from, transferId, fileName, fileSize, fileType, chunkCount } = message;
-//             // Prompt accept/reject - keep simple
-//             const accept = confirm(`${from} wants to send "${fileName}" (${(fileSize / 1024).toFixed(1)} KB). Accept?`);
-//             // Send FILE_ANSWER (server will route to sender)
-//             ws.send(JSON.stringify({
-//                 type: 'FILE_ANSWER',
-//                 to: from,
-//                 transferId,
-//                 accept: !!accept
-//             }));
-//             if (accept) {
-//                 // Prepare receiving state
-//                 receivingInProgress[transferId] = {
-//                     from,
-//                     fileName,
-//                     fileSize,
-//                     fileType,
-//                     chunkCount,
-//                     chunks: [],
-//                     receivedCount: 0
-//                 };
-//                 displaySystemMessage(`Accepted file "${fileName}" from ${from}. Receiving...`);
-//                 document.getElementById('fileTransferStatus').textContent = `Receiving ${fileName} — 0%`;
-//             }
-//             break;
-//         }
-
-//         case 'FILE_CHUNK': {
-//             const { transferId, index, data } = message;
-//             const state = receivingInProgress[transferId];
-//             if (!state) {
-//                 console.warn('Received chunk for unknown transfer:', transferId);
-//                 return;
-//             }
-//             state.chunks[index] = data; // store base64 chunk
-//             state.receivedCount++;
-//             // update progress UI
-//             const percent = Math.floor((state.receivedCount / state.chunkCount) * 100);
-//             document.getElementById('fileTransferStatus').textContent = `Receiving ${state.fileName} — ${percent}% (${state.receivedCount}/${state.chunkCount})`;
-//             break;
-//         }
-
-//         case 'FILE_COMPLETE': {
-//             const { transferId } = message;
-//             const state = receivingInProgress[transferId];
-//             if (!state) return;
-//             const combined = state.chunks.join(''); // concatenated base64 string of chunks
-//             // convert base64 to binary
-//             const bytes = base64ToUint8Array(combined);
-//             const blob = new Blob([bytes], { type: state.fileType || 'application/octet-stream' });
-//             // create download link
-//             const url = URL.createObjectURL(blob);
-//             const a = document.createElement('a');
-//             a.href = url;
-//             a.download = state.fileName;
-//             document.body.appendChild(a);
-//             a.click();
-//             a.remove();
-//             URL.revokeObjectURL(url);
-
-//             displaySystemMessage(`Received file "${state.fileName}" from ${state.from}. Saved locally.`, 'info');
-//             document.getElementById('fileTransferStatus').textContent = '';
-//             delete receivingInProgress[transferId];
-//             break;
-//         }
-
-//         case 'FILE_ANSWER': {
-//             // these are handled by waitForFileAnswer in the sender; we also show feedback
-//             const { transferId, accept, from } = message;
-//             if (!accept) {
-//                 displaySystemMessage(`${from} declined file transfer ${transferId}`, 'error');
-//                 delete sendingInProgress[transferId];
-//                 document.getElementById('fileTransferStatus').textContent = '';
-//             } else {
-//                 displaySystemMessage(`${from} accepted file transfer ${transferId}. Upload starting...`, 'info');
-//             }
-//             break;
-//         }
-//     }
-// }
 
 // -------------------- FILE TRANSFER --------------------
 let receivingInProgress = {}; // file_id -> {chunks, metadata}

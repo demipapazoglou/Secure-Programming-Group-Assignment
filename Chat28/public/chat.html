@@ -51,7 +51,9 @@
 
       <div class="message-container" id="messageContainer">
         <div class="system-message">Welcome to Chat28! Connect with others in real-time.</div>
-        <div class="system-message">Commands: /list, /all &lt;message&gt;, /tell &lt;user&gt; &lt;message&gt;</div>
+        <div class="system-message">
+          Commands: /list, /all &lt;message&gt;, /tell &lt;user&gt; &lt;message&gt;, /file &lt;user&gt; &lt;filename&gt;
+        </div>
       </div>
 
       <div class="message-input-container">
@@ -73,7 +75,7 @@
 
         <div class="input-wrapper">
           <textarea class="message-input" id="messageInput"
-            placeholder="Type your message or use /list, /all, /tell commands..." rows="1"
+            placeholder="Type your message or use /list, /all, /tell, /file commands..." rows="1"
             onkeydown="handleKeyPress(event)" oninput="adjustHeight(this)"></textarea>
           <div class="input-actions">
             <input type="file" id="fileInput" style="display:none" onchange="onFileSelected(event)" />
