@@ -43,7 +43,6 @@ Required:
 Step 1: Clone and Navigate to Project Directory
 ------------------------------------------------
 git clone https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
-cd Secure-Programming-Group-Assignment
 cd Chat28
 npm install
 
