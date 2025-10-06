@@ -124,3 +124,5 @@ ACKNOWLEDGEMENTS
 ===============================================================================
 
 This project was developed solely for academic purposes and is not intended for production or commercial deployment.
+
+Some parts of this project were assisted by AI tools for documentation and debugging support. All outputs were reviewed and checked by the team.
