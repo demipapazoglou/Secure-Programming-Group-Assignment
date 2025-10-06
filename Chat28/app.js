@@ -15,6 +15,9 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const usersRoutes = require('./routes/users');
+require('dotenv').config();
+app.locals.VULN_MODE = process.env.VULN_MODE === 'true'; // for vulnerability testing
+console.log('VULN_MODE =', app.locals.VULN_MODE);
 
 const app = express();
 

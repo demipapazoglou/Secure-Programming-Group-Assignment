@@ -1,12 +1,20 @@
 ATTACK_HINTS.txt
 
-VULN: IDOR
-Endpoint: GET /messages/:userId
+VULN: IDOR (Broken Access Control)
 
-- Enable VULN_MODE=true in local .env
-- Login as testuser1
-- Try GET /messages/testuser2 (you should get their messages if VULN_MODE is on)
-- Only use provided local test accounts
+1) Profile IDOR
+- Endpoint: GET /profile/view?id=<user_id>
+- Hint: Try requesting another user's profile by their user_id (returned at registration). The endpoint returns profile details when VULN_MODE=true.
+
+2) Messages IDOR (if present)
+- Endpoint: GET /messages/:userId
+- Hint: Try requesting messages for another username (e.g., /messages/userA) while logged in as a different user.
+
+Instructions:
+- Enable VULN_MODE=true in your local .env for testing (only run locally).
+- Install jq: `sudo apt update && sudo apt install -y jq`
+- In one terminal, start the server, and in another terminal, run `chmod +x test-idor.sh` and `./test-idor.sh`.
+- You will get the user IDs in the terminal. 
 
 
 VULN: Stored XSS
