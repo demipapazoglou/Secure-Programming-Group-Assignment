@@ -18,7 +18,7 @@ Instructions:
 
 
 VULN: Stored XSS
-- Look at the chat.html file around lines 238-280.
+- Look at the chat.html file 
     - Notice there's an escapeHtml() function defined... but is it being used everywhere?
 
 - Try sending a message with HTML tags or JavaScript code.
