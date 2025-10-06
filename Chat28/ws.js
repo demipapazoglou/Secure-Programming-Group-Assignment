@@ -24,6 +24,8 @@ const seenMessages = new Set();
 const MAX_SEEN_CACHE = 10000;
 let seenCacheArray = [];
 
+let address;
+
 function addToSeenCache(msgId) {
   if (!seenMessages.has(msgId)) {
     seenMessages.add(msgId);
@@ -42,6 +44,8 @@ function initialiseWebSocket(server) {
 
   wss.on('connection', async (ws, req) => {
     let username = null;
+
+	address = req.socket.remoteAddress;
 
     ws.on('message', async (data) => {
       try {
@@ -553,4 +557,4 @@ function broadcastToRoom(room, message, excludeUser = null) {
   });
 }
 
-module.exports = { initialiseWebSocket };
+module.exports = { initialiseWebSocket, address };
