@@ -58,52 +58,6 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-/*
- * INTENTIONAL SECURITY FLAW (IDOR / Broken Access Control)
- * Demonstrates insecure direct object reference by allowing access to any user's profile data
- * using their user_id without proper authorization checks.
- * Controlled by VULN_MODE environment flag 
- * When VULN_MODE is false or unset, this endpoint returns 403 Forbidden.
- */
-
-// INSECURE IDOR ENDPOINT (gated)
-router.get('/view', async (req, res) => {
-  try {
-    const targetId = req.query.id;
-    if (!targetId) {
-      return res.status(400).json({ error: 'Missing user_id parameter' });
-    }
-
-    const vuln = req.app && req.app.locals && req.app.locals.VULN_MODE === true;
-
-    if (!vuln) {
-      // secure default behaviour to not reveal other users' profiles
-      return res.status(403).json({ error: 'Forbidden: IDOR endpoint disabled' });
-    }
-
-    // INTENTIONAL VULN
-    // Purpose: demonstrate Broken Access Control / IDOR.
-    // In VULN_MODE=true we intentionally return another user's profile by user_id without auth.
-    const user = await User.findOne({ user_id: targetId }).select('-password');
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    return res.json({
-      user_id: user.user_id,
-      username: user.username,
-      bio: user.bio,
-      publicKey: user.publicKey,
-      fingerprint: user.fingerprint,
-      createdAt: user.createdAt,
-      note: 'INTENTIONAL VULN — This endpoint demonstrates an IDOR / Broken Access Control issue.'
-    });
-  } catch (err) {
-    console.error('IDOR /profile/view error:', err);
-    return res.status(500).json({ error: 'Server error: ' + err.message });
-  }
-});
-
 /* PUBLIC: lookup by username (non-authenticated read, limited exposure) */
 router.get('/:username', async (req, res) => {
   try {

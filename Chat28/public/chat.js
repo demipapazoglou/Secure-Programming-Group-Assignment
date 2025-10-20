@@ -420,9 +420,6 @@ function displayPublicMessage(from, content, timestamp) {
             <div class="message-time">${time}</div>
         </div>
     `;
-    // VULN HERE
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
 }
 
 function displayPrivateMessage(user, content, isSent) {
@@ -443,10 +440,6 @@ function displayPrivateMessage(user, content, isSent) {
             <div class="message-time">${time}</div>
         </div>
     `;
-    // VULN HERE
-
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
 }
 
 function displaySystemMessage(text, type = 'info') {

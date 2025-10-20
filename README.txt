@@ -23,8 +23,7 @@ TABLE OF CONTENTS
 3. Dependencies
 4. Usage Examples
 5. Troubleshooting
-6. Vulnerability Discovery Hints
-7. Contact Information
+6. Contact Information
 
 --------------------------------------------------------------------------------
 1. SYSTEM REQUIREMENTS
@@ -183,48 +182,7 @@ Solution: Check browser console for WebSocket errors
           Ensure recipient is online for private messages
 
 --------------------------------------------------------------------------------
-6. VULNERABILITY DISCOVERY HINTS
---------------------------------------------------------------------------------
-
-REMINDER: This code contains intentional vulnerabilities for peer review.
-The vulnerabilities are labeled with comments in the source code.
-
-If you're having trouble discovering them, here are some hints:
-
-Hint 1: Access Control Issues
-------------------------------
-Look for endpoints that accept user identifiers as parameters.
-Are there proper authorization checks?
-Can one user access another user's private data?
-
-Files to examine:
-- routes/profile.js (check all GET endpoints)
-- Look for endpoints that use query parameters
-
-Environment configuration:
-- Some vulnerabilities only activate when VULN_MODE=true in .env
-
-Hint 2: Input Sanitisation Problems
-------------------------------------
-Examine how user-generated content is displayed in the browser.
-Is all content properly escaped before rendering?
-
-Files to examine:
-- public/chat.js (check message display functions)
-- Look for innerHTML usage
-- Check if escapeHtml() function exists - is it used consistently?
-
-Testing approach:
-- Try sending HTML tags in chat messages
-- Try sending JavaScript code in messages
-- Observe what happens in the browser
-
-Remember: The vulnerabilities are clearly marked with comments once you find
-them. They demonstrate understanding of common security weaknesses and are
-intentional for educational purposes.
-
---------------------------------------------------------------------------------
-7. CONTACT INFORMATION
+6. CONTACT INFORMATION
 --------------------------------------------------------------------------------
 
 If you have any trouble running the Chat28 application or questions about our
