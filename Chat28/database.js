@@ -14,8 +14,6 @@ async function connectDB() {
     await mongoose.connect(
       process.env.MONGODB_URI || "mongodb://localhost/chat28",
       {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
         dbName: process.env.MONGO_DB || "Chat28",
       }
     );

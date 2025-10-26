@@ -46,7 +46,7 @@ function initialiseWebSocket(server) {
   wss.on('connection', async (ws, req) => {
     let username = null;
 
-	address = req.socket.remoteAddress;
+    address = req.socket.remoteAddress;
 
     ws.on('message', async (data) => {
       try {
@@ -138,6 +138,12 @@ function initialiseWebSocket(server) {
 
           case 'ICE_CANDIDATE':
             handleIceCandidate(username, message);
+            break;
+
+          case 'FILE_START':
+          case 'FILE_CHUNK':
+          case 'FILE_END':
+            handleFileTransfer(username, message);
             break;
 
           default:
@@ -457,6 +463,37 @@ function broadcastToRoom(room, message, excludeUser = null) {
       }
     }
   });
+}
+
+// Handle file transfer messages (encrypted file chunks)
+function handleFileTransfer(username, message) {
+  const { type, to } = message;
+  
+  const recipientWs = clients.get(to);
+  if (!recipientWs || recipientWs.readyState !== WebSocket.OPEN) {
+    console.log(`[FILE] Recipient ${to} not online`);
+    const senderWs = clients.get(username);
+    if (senderWs && senderWs.readyState === WebSocket.OPEN) {
+      senderWs.send(JSON.stringify({
+        type: 'MSG_ERROR',
+        error: 'Recipient offline for file transfer',
+        to: to
+      }));
+    }
+    return;
+  }
+
+  // Forward encrypted file message to recipient
+  const forwardMsg = {
+    type: message.type,
+    from: username,
+    to: to,
+    ts: message.ts || Date.now(),
+    payload: message.payload
+  };
+
+  recipientWs.send(JSON.stringify(forwardMsg));
+  console.log(`[FILE] ${type} from ${username} to ${to}`);
 }
 
 module.exports = { initialiseWebSocket, address };
