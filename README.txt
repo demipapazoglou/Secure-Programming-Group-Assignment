@@ -7,14 +7,6 @@ Course: COMP SCI 3307 - Secure Programming
 Repository: https://github.com/demipapazoglou/Secure-Programming-Group-Assignment.git
 --------------------------------------------------------------------------------
 
-IMPORTANT NOTE
-
-This submission contains INTENTIONAL VULNERABILITIES for peer review purposes. 
-The vulnerabilities are clearly labeled with comments in the source code but are left for other groups to discover.
-
-If you're having difficulty finding them, check the hints section at the end
-of this document (Section 6).
-
 --------------------------------------------------------------------------------
 TABLE OF CONTENTS
 --------------------------------------------------------------------------------
@@ -28,7 +20,6 @@ TABLE OF CONTENTS
 --------------------------------------------------------------------------------
 1. SYSTEM REQUIREMENTS
 --------------------------------------------------------------------------------
-
 Required:
 - Node.js v18.0.0 or higher
 - npm (Node Package Manager)
@@ -53,12 +44,9 @@ Create a file named ".env" inside the Chat28 directory with this content:
 
 MONGODB_URI=mongodb+srv://28_admin:UzSNxWdBjBjtohWi@28test.fphel12.mongodb.net/?retryWrites=true&w=majority&appName=28Test
 MONGO_DB=28test
-JWT_SECRET=super-secure-jwt-secret-key-at-least-32-characters-long
+JWT_SECRET=super-secure-jwt-secret-key-at-least-32-characters-long-just-for-this-project
 PORT=3000
 NODE_ENV=development
-VULN_MODE=true
-
-Note: VULN_MODE=true enables the intentional vulnerabilities for testing.
 
 Step 3: Run the Server
 ----------------------
